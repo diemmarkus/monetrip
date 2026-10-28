@@ -156,7 +156,13 @@ function signInView() {
       f.querySelector("button[type=submit]").disabled = true;
       guestName = name; if (!code) location.hash = "join-" + c;
       try { const r = await signInAnonymously(auth); await updateProfile(r.user, { displayName: name }); }
-      catch { guestName = null; gerr.hidden = false; gerr.textContent = "Couldn't join as a guest. Try again, or sign in with Google."; f.querySelector("button[type=submit]").disabled = false; }
+      catch (x) {
+        guestName = null; gerr.hidden = false; f.querySelector("button[type=submit]").disabled = false;
+        gerr.textContent = ["auth/operation-not-allowed", "auth/admin-restricted-operation"].includes(x.code)
+          ? "Guest sign-in is switched off for MoneTrip. Ask the trip owner to enable it, or sign in with Google."
+          : x.code === "auth/network-request-failed" ? "No connection. Check your internet and try again."
+          : "Couldn't join as a guest (" + (x.code || "unknown error") + "). Try again, or sign in with Google.";
+      }
     } },
     h("h2", { text: code ? "Join as a guest" : "Got a trip code?" }),
     h("p", { class: "muted", text: "Just your first name. No account needed." }),
