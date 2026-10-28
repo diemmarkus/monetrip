@@ -79,11 +79,11 @@ function openTrip(id) {
 function closeTrip() { cur.unsubs.forEach(u => u()); cur = { id: null, trip: null, expenses: [], unsubs: [] }; ui.joinPick = false; }
 function goHome() { closeTrip(); history.replaceState(null, "", location.pathname); render(); }
 
-async function createTrip(name, ccy, nick) {
+async function createTrip(name, ccy, local, nick) {
   let code = refCode();
   for (let i = 0; i < 5 && (await getDoc(doc(db, "codes", code))).exists(); i++) code = refCode();
   const id = rid(20), mid = rid(8);
-  await setDoc(doc(db, "trips", id), { name, currency: ccy, code, createdBy: me.uid, createdAt: Date.now(),
+  await setDoc(doc(db, "trips", id), { name, currency: ccy, localCurrency: local, code, createdBy: me.uid, createdAt: Date.now(),
     members: { [mid]: { name: nick, uid: me.uid } }, memberUids: [me.uid], settlement: null, paid: {} });
   await setDoc(doc(db, "codes", code), { tripId: id });
   openTrip(id);
@@ -176,18 +176,22 @@ function signInView() {
 }
 function homeView() {
   const err = h("p", { class: "err", hidden: true });
-  const createForm = h("form", { class: "panel", onsubmit: async e => {
+  let home = "EUR"; try { home = localStorage.getItem("mt-home") || "EUR"; } catch {}
+  const ccySelect = (id, sel) => h("select", { id, name: id }, CURRENCIES.map(c => h("option", { value: c, selected: c === sel }, c)));
+  const createForm = h("form", { class: "panel xform", onsubmit: async e => {
       e.preventDefault(); const f = e.target, name = f.tname.value.trim(), nick = f.tnick.value.trim(); if (!name || !nick) return;
-      f.querySelector("button").disabled = true;
-      try { await createTrip(name, f.tccy.value, nick); } catch { err.hidden = false; err.textContent = "Couldn't create the trip. Check your connection and try again."; f.querySelector("button").disabled = false; }
+      const btn = f.querySelector("button[type=submit]"); btn.disabled = true;
+      try { localStorage.setItem("mt-home", f.thome.value); } catch {}
+      try { await createTrip(name, f.thome.value, f.tlocal.value, nick); } catch { err.hidden = false; err.textContent = "Couldn't create the trip. Check your connection and try again."; btn.disabled = false; }
     } },
     h("h2", { text: "New trip" }),
-    h("div", { class: "row" },
-      h("label", { class: "grow" }, "Trip name", h("input", { id: "tname", name: "tname", placeholder: "Istanbul, November", required: true, maxlength: 60 })),
-      h("label", { style: "flex:0 0 110px" }, "Currency", h("select", { id: "tccy", name: "tccy" }, CURRENCIES.map(c => h("option", { value: c, selected: c === "EUR" }, c))))),
-    h("div", { class: "row" },
-      h("label", { class: "grow" }, "Your name on this trip", h("input", { id: "tnick", name: "tnick", value: firstName(), required: true, maxlength: 30 })),
-      h("button", { class: "primary", type: "submit" }, "Create trip")), err);
+    h("label", {}, "Trip name", h("input", { id: "tname", name: "tname", placeholder: "Edinburgh, November", required: true, maxlength: 60 })),
+    h("div", { class: "pair" },
+      h("label", {}, "Home currency", ccySelect("thome", home), h("span", { class: "hint", text: "Everyone settles up in this" })),
+      h("label", {}, "Trip currency", ccySelect("tlocal", home), h("span", { class: "hint", text: "What you'll mostly pay in" }))),
+    h("label", {}, "Your name on this trip", h("input", { id: "tnick", name: "tnick", value: firstName(), required: true, maxlength: 30 })),
+    err,
+    h("button", { class: "primary", type: "submit" }, "Create trip"));
   const jerr = h("p", { class: "err", hidden: true });
   const joinForm = h("form", { class: "panel", onsubmit: async e => {
       e.preventDefault();
@@ -201,7 +205,7 @@ function homeView() {
   const list = trips.length ? h("div", { class: "trips" }, trips.map(t => {
       const n = Object.keys(t.members || {}).length;
       return h("button", { class: "trip", onclick: () => openTrip(t.id) },
-        h("span", {}, h("strong", { text: t.name }), h("br"), h("span", { class: "muted", text: `${n} ${n === 1 ? "person" : "people"} · ${t.currency}${t.settlement ? " · settled" : ""}` })),
+        h("span", {}, h("strong", { text: t.name }), h("br"), h("span", { class: "muted", text: `${n} ${n === 1 ? "person" : "people"} · ${t.localCurrency && t.localCurrency !== t.currency ? t.localCurrency + " → " : ""}${t.currency}${t.settlement ? " · settled" : ""}` })),
         h("span", { class: "code", text: t.code }));
     }))
     : h("div", { class: "empty", text: "No trips yet. Create one below, or join a friend's trip with their code." });
@@ -219,7 +223,7 @@ function tripView() {
   out.push(h("div", { class: "ticket" },
     h("div", {}, h("div", { class: "lbl", text: "Trip" }), h("h1", { text: t.name })),
     h("div", { style: "text-align:right" }, h("div", { class: "lbl", text: "Trip code" }), h("div", { class: "ref", text: t.code })),
-    h("div", { class: "meta" }, h("span", {}, "Total ", h("b", { class: "num", text: money(total, ccy) })), h("span", {}, `${ids.length} ${ids.length === 1 ? "person" : "people"}`), h("span", {}, `${cur.expenses.length} expenses`), h("span", {}, "Settles in " + ccy))));
+    h("div", { class: "meta" }, h("span", {}, "Total ", h("b", { class: "num", text: money(total, ccy) })), h("span", {}, `${ids.length} ${ids.length === 1 ? "person" : "people"}`), h("span", {}, `${cur.expenses.length} expenses`), h("span", {}, (t.localCurrency && t.localCurrency !== ccy ? "Paying in " + t.localCurrency + " · " : "") + "Settles in " + ccy))));
 
   if (!mine && guestName && !cur.autoJoined) {
     cur.autoJoined = true; const n = guestName;
@@ -315,7 +319,7 @@ function tripView() {
     h("label", {}, "Amount",
       h("span", { class: "money" },
         h("input", { id: "xamt", name: "xamt", inputmode: "decimal", placeholder: "0,00", autocomplete: "off" }),
-        h("select", { id: "xccy", name: "xccy", "aria-label": "Currency", onchange: e => syncRate(e.target.form) }, CURRENCIES.map(c => h("option", { value: c, selected: c === ccy }, c))))),
+        h("select", { id: "xccy", name: "xccy", "aria-label": "Currency", onchange: e => syncRate(e.target.form) }, CURRENCIES.map(c => h("option", { value: c, selected: c === (t.localCurrency || ccy) }, c))))),
     rateBox,
     h("label", {}, "Paid by", h("select", { id: "xpaid", name: "xpaid" }, ids.map(id => h("option", { value: id, selected: id === mine }, memberName(t, id) + (id === mine ? " (you)" : ""))))),
     h("div", {}, h("h3", { text: "Split equally between", style: "margin-bottom:8px" }),
@@ -326,6 +330,7 @@ function tripView() {
     const c = form.xccy.value; rateBox.hidden = c === ccy; form.xrate.required = c !== ccy;
     $("#fxfrom", rateBox).textContent = "1 " + c + " =";
     const a = c === ccy ? null : autoRate(c, ccy);
+    if (a && !form.xrate.value) form.xrate.value = String(a).replace(".", ",");
     form.dataset.auto = a && parseNum(form.xrate.value) === a ? "1" : "";
     preview(form);
   };
@@ -380,7 +385,7 @@ function tripView() {
 }
 
 /* ---------- boot ---------- */
-loadRates();
+loadRates().then(() => { if (me && cur.trip) render(); });
 onAuthStateChanged(auth, async user => {
   me = user; unsubTrips?.(); trips = [];
   if (!me) { render(); return; }

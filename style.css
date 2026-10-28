@@ -100,3 +100,6 @@ details summary{cursor:pointer;font-weight:600;color:var(--accent)}
 .fx-line input{width:9ch;flex:0 0 auto;min-height:38px;padding:6px 8px;font-family:var(--mono);background:var(--surface)}
 .fx-note{font-size:13px;color:var(--muted)}
 .xform>button[type=submit]{width:100%}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pair>label{min-width:0}
+.hint{font-size:12px;font-weight:400;color:var(--muted)}
