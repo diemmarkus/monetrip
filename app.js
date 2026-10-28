@@ -414,16 +414,20 @@ function tripView() {
 
   /* add expense */
   const xerr = h("p", { class: "err", hidden: true });
-  const rateNote = h("p", { class: "fx-note" });
+  const rateNote = h("span", { class: "fx-conv" });
+  const infoText = h("p", { class: "fx-info", id: "fxinfo", hidden: !ui.fxInfo });
+  const infoBtn = h("button", { type: "button", class: "info-btn", "aria-label": "About this exchange rate", "aria-controls": "fxinfo", "aria-expanded": String(!!ui.fxInfo),
+    onclick: ev => { ui.fxInfo = !ui.fxInfo; infoText.hidden = !ui.fxInfo; ev.currentTarget.setAttribute("aria-expanded", String(ui.fxInfo)); } }, "i");
   const rateBox = h("div", { class: "fx", hidden: true },
-    h("label", { class: "fx-line", for: "xrate" }, h("span", { id: "fxfrom" }), h("input", { id: "xrate", name: "xrate", inputmode: "decimal", placeholder: "0,00", "aria-label": "Exchange rate" }), h("span", { text: ccy })),
-    rateNote);
-  const shortDate = d => new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+    h("div", { class: "fx-row" },
+      h("label", { class: "fx-line", for: "xrate" }, h("span", { id: "fxfrom" }), h("input", { id: "xrate", name: "xrate", inputmode: "decimal", placeholder: "0,00", "aria-label": "Exchange rate" }), h("span", { text: ccy })),
+      rateNote, infoBtn),
+    infoText);
   const preview = f => {
     const c = f.xccy.value; if (c === ccy) return;
     const amt = parseNum(f.xamt.value), r = parseNum(f.xrate.value);
-    const conv = amt > 0 && r > 0 ? "≈ " + money(Math.round(amt * r * 100), ccy) + " · " : "";
-    rateNote.textContent = conv + (f.dataset.auto === "1" ? `ECB rate, ${shortDate(fx.date)}. Edit it if your bank charged a different rate.` : "Enter the rate your bank used.");
+    rateNote.textContent = amt > 0 && r > 0 ? "≈ " + money(Math.round(amt * r * 100), ccy) : "";
+    infoText.textContent = f.dataset.auto === "1" ? `ECB rate, ${shortDate(fx.date)}. Edit it if your bank charged a different rate.` : "No automatic rate right now. Enter the rate your bank used.";
   };
   const syncRate = f => {
     const c = f.xccy.value; rateBox.hidden = c === ccy; f.xrate.required = c !== ccy;
