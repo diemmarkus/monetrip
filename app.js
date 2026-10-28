@@ -91,7 +91,7 @@ function openTrip(id) {
   }, () => {}));
   render();
 }
-function closeTrip() { cur.unsubs.forEach(u => u()); cur = { id: null, trip: null, expenses: [], unsubs: [] }; ui.joinPick = false; }
+function closeTrip() { ui.sheetOpen = false; ui.editing = null; document.documentElement.classList.remove("sheet-open"); cur.unsubs.forEach(u => u()); cur = { id: null, trip: null, expenses: [], unsubs: [] }; ui.joinPick = false; }
 function goHome() { closeTrip(); history.replaceState(null, "", location.pathname); render(); }
 
 async function createTrip(name, ccy, local, nick) {
@@ -193,15 +193,35 @@ function resetExpenseForm() {
   ui.forOpen = false; f.querySelector("#forlist").hidden = true; f.querySelector("#forbtn").setAttribute("aria-expanded", "false");
   f._resync?.(); f._syncIcon?.();
 }
+function openSheet() {
+  ui.sheetOpen = true; syncSheet();
+  const w = $("#sheet"); w?.classList.add("anim"); setTimeout(() => w?.classList.remove("anim"), 350);
+  const f = app.querySelector(".xform");
+  setTimeout(() => (ui.editing ? f?.xamt : f?.xdesc)?.focus({ preventScroll: true }), 60);
+}
+function closeSheet() {
+  const wasEditing = !!ui.editing;
+  ui.sheetOpen = false; ui.editing = null;
+  if (wasEditing) render(); else syncSheet();
+  resetExpenseForm();
+  $("#fab")?.focus({ preventScroll: true });
+}
+function syncSheet() {
+  const on = !!(ui.sheetOpen && cur.id);
+  const w = $("#sheet"); if (w) w.hidden = !on;
+  const fab = $("#fab"); if (fab) fab.hidden = on;
+  document.documentElement.classList.toggle("sheet-open", on);
+}
+document.addEventListener("keydown", e => { if (e.key === "Escape" && ui.sheetOpen) closeSheet(); });
 function startEdit(e) {
-  ui.editing = e.id; render();
+  ui.editing = e.id; ui.sheetOpen = true; render();
   const f = app.querySelector(".xform"); if (!f) return;
   f.xdesc.value = e.desc; f.xamt.value = String(e.amount).replace(".", ",");
   f.xccy.value = e.currency; f.xrate.value = String(e.rate || 1).replace(".", ",");
   f.xpaid.value = e.paidBy; f.xdate.value = dayKey(e); f.xicon.value = e.icon || ""; f._syncIcon?.();
   for (const cb of f.querySelectorAll("input[name=xsplit]")) cb.checked = (e.split || []).includes(cb.value);
   f._resync?.();
-  f.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+  openSheet();
 }
 
 /* ---------- views ---------- */
@@ -233,11 +253,13 @@ function brand() {
       guest ? h("button", { class: "ghost", style: "color:var(--accent-text)", onclick: saveWithGoogle }, "Save with Google") : null, out) : null));
 }
 function render() {
-  const ae = document.activeElement?.id, saved = {};
+  const ae = document.activeElement?.id, saved = {}, sheetScroll = $("#sheet .xform")?.scrollTop || 0;
   for (const el of app.querySelectorAll("input[id],select[id]")) saved[el.id] = el.type === "checkbox" ? el.checked : el.value;
   app.replaceChildren(...(!me ? signInView() : cur.id ? tripView() : homeView()));
   for (const [id, v] of Object.entries(saved)) { const el = document.getElementById(id); if (!el) continue; if (el.type === "checkbox") el.checked = v; else el.value = v; }
   app.querySelector(".xform")?._resync?.();
+  syncSheet();
+  if (sheetScroll) { const sf = $("#sheet .xform"); if (sf) sf.scrollTop = sheetScroll; }
   app.querySelector(".xform")?._syncIcon?.();
   if (ae) document.getElementById(ae)?.focus();
 }
@@ -463,16 +485,21 @@ function tripView() {
       const data = { desc: f.xdesc.value.trim(), icon: f.xicon.value, amount, currency: c, rate, paidBy: f.xpaid.value, split, date: f.xdate.value || isoDay(Date.now()) };
       if (data.icon !== (editing?.icon || "")) rememberIcon(t, data.desc, data.icon);
       try {
-        if (editing) { await updateDoc(doc(db, "trips", t.id, "expenses", editing.id), { ...data, changed: Date.now() }); ui.editing = null; render(); resetExpenseForm(); toast("Expense updated"); }
+        if (editing) { await updateDoc(doc(db, "trips", t.id, "expenses", editing.id), { ...data, changed: Date.now() }); closeSheet(); toast("Expense updated"); }
         else {
           const newId = rid(); ui.justAdded = { id: newId, t0: Date.now() };
-          await setDoc(doc(db, "trips", t.id, "expenses", newId), { ...data, at: Date.now(), by: mine }); resetExpenseForm(); toast("Expense added");
+          // Hide the sheet right away so the new row's fold-in animation is visible; keep the values until the save succeeds.
+          ui.sheetOpen = false; syncSheet();
+          try { await setDoc(doc(db, "trips", t.id, "expenses", newId), { ...data, at: Date.now(), by: mine }); }
+          catch (err) { ui.justAdded = null; openSheet(); throw err; }
+          resetExpenseForm(); $("#fab")?.focus({ preventScroll: true }); toast("Expense added");
         }
       }
-      catch { xerr.hidden = false; xerr.textContent = "Couldn't save the expense. Try again."; }
+      catch { xerr.hidden = false; xerr.textContent = "Couldn't save the expense. Try again."; toast("Couldn't save the expense. Try again."); }
       btn.disabled = false;
     } },
-    h("h2", { text: editing ? "Edit expense" : "Add an expense" }),
+    h("div", { class: "top sheet-head" }, h("h2", { id: "sheettitle", text: editing ? "Edit expense" : "Add an expense" }),
+      h("button", { type: "button", class: "icon-btn close-btn", "aria-label": "Close", onclick: closeSheet }, "✕")),
     h("div", { class: "field" }, h("label", { for: "xdesc", text: "What for" }),
       h("div", { class: "desc-row" }, iconBtn, h("input", { id: "xdesc", name: "xdesc", placeholder: "Dinner, taxi, hotel…", maxlength: 80, autocomplete: "off" }),
         h("input", { type: "hidden", id: "xicon", name: "xicon", value: "" })),
@@ -495,7 +522,7 @@ function tripView() {
     xerr,
     editing
       ? h("div", { class: "pair" },
-          h("button", { type: "button", onclick: () => { ui.editing = null; render(); resetExpenseForm(); } }, "Cancel"),
+          h("button", { type: "button", onclick: closeSheet }, "Cancel"),
           h("button", { class: "primary", type: "submit" }, "Save changes"))
       : h("button", { class: "primary", type: "submit" }, "Add expense"));
   if (editing) form.classList.add("editing");
@@ -522,7 +549,10 @@ function tripView() {
     form.dataset.auto = a && parseNum(form.xrate.value) === a ? "1" : "";
     preview(form);
   };
-  out.push(form);
+  form.classList.add("sheet");
+  out.push(h("div", { class: "sheet-wrap", id: "sheet", hidden: !ui.sheetOpen, role: "dialog", "aria-modal": "true", "aria-labelledby": "sheettitle",
+      onclick: e => { if (e.target === e.currentTarget) closeSheet(); } }, form),
+    h("button", { class: "fab", id: "fab", "aria-label": "Add expense", title: "Add expense", hidden: !!ui.sheetOpen, onclick: openSheet }, h("span", { "aria-hidden": "true", text: "+" })));
 
   /* expenses */
   const hasOwn = cur.expenses.some(e => e.by === mine);
