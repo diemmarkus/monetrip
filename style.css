@@ -142,3 +142,8 @@ details summary{cursor:pointer;font-weight:600;color:var(--accent-text)}
 .toast{display:flex;align-items:center;gap:14px}
 .toast-act{background:none;border:none;color:inherit;font-weight:700;text-decoration:underline;text-underline-offset:3px;padding:4px 6px;min-height:0}
 @media (prefers-reduced-motion:no-preference){.swipe .li{transition:transform .2s ease}.swipe .li.dragging{transition:none}.sw-bg{transition:opacity .15s}}
+.day{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:16px 2px 6px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);border-bottom:1px solid var(--line)}
+.day:first-child{padding-top:2px}
+.day .num{text-transform:none;letter-spacing:0;font-size:13px}
+.day + .swipe{border-top:none}
+input[type=date]{min-height:44px;-webkit-appearance:none;appearance:none}

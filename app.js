@@ -44,6 +44,15 @@ function refCode() { const a = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; let s = ""; f
 const fmt = (v, c) => { try { return new Intl.NumberFormat("de-AT", { style: "currency", currency: c }).format(v); } catch { return v + " " + c; } };
 const money = (cents, c) => fmt(cents / 100, c);
 const parseNum = s => parseFloat(String(s).replace(/\s/g, "").replace(",", "."));
+const isoDay = ts => { const d = new Date(ts); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+const dayKey = e => e.date || isoDay(e.at || Date.now());
+function dayLabel(key) {
+  const today = isoDay(Date.now()), yest = isoDay(Date.now() - 864e5);
+  if (key === today) return "Today";
+  if (key === yest) return "Yesterday";
+  const [y, m, d] = key.split("-").map(Number), dt = new Date(y, m - 1, d);
+  return dt.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", ...(y !== new Date().getFullYear() ? { year: "numeric" } : {}) });
+}
 const inviteLink = code => location.origin + location.pathname + "#join-" + code;
 
 /* ---------- exchange rates (ECB via Frankfurter) ---------- */
@@ -76,7 +85,8 @@ function openTrip(id) {
   cur.unsubs.push(onSnapshot(doc(db, "trips", id), s => { cur.trip = s.exists() ? { id: s.id, ...s.data() } : null; if (!cur.trip) cur.missing = true; render(); },
     () => { cur.missing = true; render(); }));
   cur.unsubs.push(onSnapshot(collection(db, "trips", id, "expenses"), s => {
-    cur.expenses = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.at || 0) - (a.at || 0)); render();
+    cur.expenses = s.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => dayKey(b).localeCompare(dayKey(a)) || (b.at || 0) - (a.at || 0)); render();
   }, () => {}));
   render();
 }
@@ -170,7 +180,7 @@ function startEdit(e) {
   const f = app.querySelector(".xform"); if (!f) return;
   f.xdesc.value = e.desc; f.xamt.value = String(e.amount).replace(".", ",");
   f.xccy.value = e.currency; f.xrate.value = String(e.rate || 1).replace(".", ",");
-  f.xpaid.value = e.paidBy;
+  f.xpaid.value = e.paidBy; f.xdate.value = dayKey(e);
   for (const cb of f.querySelectorAll("input[name=xsplit]")) cb.checked = (e.split || []).includes(cb.value);
   f._resync?.();
   f.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
@@ -415,7 +425,7 @@ function tripView() {
       const bad = !f.xdesc.value.trim() ? "Add a short description." : !(amount > 0) ? "Enter an amount above zero." : !(rate > 0) ? `Enter how many ${ccy} one ${c} is worth.` : !split.length ? "Pick at least one person to split with." : null;
       if (bad) { xerr.hidden = false; xerr.textContent = bad; return; }
       const btn = f.querySelector("button[type=submit]"); btn.disabled = true;
-      const data = { desc: f.xdesc.value.trim(), amount, currency: c, rate, paidBy: f.xpaid.value, split };
+      const data = { desc: f.xdesc.value.trim(), amount, currency: c, rate, paidBy: f.xpaid.value, split, date: f.xdate.value || isoDay(Date.now()) };
       try {
         if (editing) { await updateDoc(doc(db, "trips", t.id, "expenses", editing.id), { ...data, changed: Date.now() }); ui.editing = null; render(); resetExpenseForm(); toast("Expense updated"); }
         else { await setDoc(doc(db, "trips", t.id, "expenses", rid()), { ...data, at: Date.now(), by: mine }); resetExpenseForm(); toast("Expense added"); }
@@ -430,7 +440,9 @@ function tripView() {
         h("input", { id: "xamt", name: "xamt", inputmode: "decimal", placeholder: "0,00", autocomplete: "off" }),
         h("select", { id: "xccy", name: "xccy", "aria-label": "Currency", onchange: e => syncRate(e.target.form) }, CURRENCIES.map(c => h("option", { value: c, selected: c === (t.localCurrency || ccy) }, c))))),
     rateBox,
-    h("label", {}, "Paid by", h("select", { id: "xpaid", name: "xpaid" }, ids.map(id => h("option", { value: id, selected: id === mine }, memberName(t, id) + (id === mine ? " (you)" : ""))))),
+    h("div", { class: "pair" },
+      h("label", {}, "Paid by", h("select", { id: "xpaid", name: "xpaid" }, ids.map(id => h("option", { value: id, selected: id === mine }, memberName(t, id) + (id === mine ? " (you)" : ""))))),
+      h("label", {}, "Date", h("input", { id: "xdate", name: "xdate", type: "date", value: isoDay(Date.now()), max: isoDay(Date.now() + 864e5 * 366) }))),
     h("div", {}, h("h3", { text: "Split equally between", style: "margin-bottom:8px" }),
       h("div", { class: "checks" }, ids.map(id => h("label", {}, h("input", { type: "checkbox", name: "xsplit", value: id, checked: true, id: "xs-" + id }), memberName(t, id))))),
     xerr,
@@ -455,20 +467,23 @@ function tripView() {
   out.push(h("div", { class: "panel" },
     h("div", { class: "top" }, h("h2", { text: "Expenses" }),
       cur.expenses.length ? h("span", { class: "hint", text: hasOwn ? "Swipe ← to delete · → to edit yours" : "Swipe ← to delete" }) : null),
-    cur.expenses.length ? h("div", { class: "list" }, cur.expenses.map(e => {
+    cur.expenses.length ? h("div", { class: "list" }, cur.expenses.flatMap((e, i) => {
       const base = Math.round(e.amount * (e.rate || 1) * 100), own = e.by === mine;
       const fg = h("div", { class: "li" + (ui.editing === e.id ? " is-editing" : ""), tabindex: 0,
           "aria-label": `${e.desc}, ${fmt(e.amount, e.currency)}. ${own ? "Press E to edit, " : ""}Delete key to delete.`,
           onkeydown: ev => { if (own && ev.key.toLowerCase() === "e") startEdit(e); else if (ev.key === "Delete") deleteExpense(t, e); } },
         h("b", { text: e.desc }),
         h("span", { class: "act" }, h("span", { class: "num", text: fmt(e.amount, e.currency) })),
-        h("span", { class: "sub", text: `${memberName(t, e.paidBy)} paid · split ${e.split.length} ways${e.currency !== ccy ? ` · ${money(base, ccy)} at ${e.rate}` : ""} · ${new Date(e.at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}` }));
+        h("span", { class: "sub", text: `${memberName(t, e.paidBy)} paid · split ${e.split.length} ways${e.currency !== ccy ? ` · ${money(base, ccy)} at ${e.rate}` : ""}` }));
       const row = h("div", { class: "swipe" },
         h("div", { class: "sw-bg sw-del", "aria-hidden": "true" }, "Delete"),
         h("div", { class: "sw-bg sw-edit", "aria-hidden": "true" }, "Edit"),
         fg);
       attachSwipe(row, fg, { left: () => deleteExpense(t, e), right: own ? () => startEdit(e) : null });
-      return row;
+      const key = dayKey(e);
+      if (i > 0 && dayKey(cur.expenses[i - 1]) === key) return [row];
+      const dayTotal = cur.expenses.filter(x => dayKey(x) === key).reduce((sum, x) => sum + Math.round(x.amount * (x.rate || 1) * 100), 0);
+      return [h("div", { class: "day" }, h("span", { text: dayLabel(key) }), h("span", { class: "num", text: money(dayTotal, ccy) })), row];
     })) : h("div", { class: "empty", text: "No expenses yet. Add the first one above, like the hotel or a dinner." })));
 
   /* people & invite */
