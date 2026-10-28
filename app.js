@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut }
+import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut, signInAnonymously, updateProfile, linkWithPopup }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -18,6 +18,7 @@ let me = null;            // Firebase user
 let trips = [], unsubTrips = null;
 let cur = { id: null, trip: null, expenses: [], unsubs: [] };
 let ui = { joinPick: false };
+let guestName = null;   // first name typed on the guest form, used once to join
 let fx = null;            // {date, rates: {EUR:1, USD:..}}
 
 /* ---------- helpers ---------- */
@@ -103,12 +104,30 @@ async function addMember(name, withMe) {
 }
 
 /* ---------- views ---------- */
+const firstName = () => guestName || (me?.displayName || "").split(" ")[0];
+function googleSignIn() {
+  const p = new GoogleAuthProvider();
+  return signInWithPopup(auth, p).catch(e => { if (e.code === "auth/popup-blocked") signInWithRedirect(auth, p); else if (e.code !== "auth/popup-closed-by-user") toast("Sign-in didn't finish. Try again."); });
+}
+async function saveWithGoogle() {
+  try { const r = await linkWithPopup(me, new GoogleAuthProvider()); me = r.user; toast("Saved. You can now sign in with Google on any device."); render(); }
+  catch (e) {
+    if (e.code === "auth/credential-already-in-use") toast("That Google account already uses MoneTrip. Sign out and sign in with Google instead.");
+    else if (e.code !== "auth/popup-closed-by-user") toast("Couldn't connect Google. Try again.");
+  }
+}
 function brand() {
+  const guest = me?.isAnonymous;
+  const out = h("button", { class: "ghost", onclick: ev => {
+    const b = ev.currentTarget;
+    if (guest && !b.dataset.sure) { b.dataset.sure = "1"; b.textContent = "Sure? You'll lose access"; setTimeout(() => { if (b.isConnected) { delete b.dataset.sure; b.textContent = "Sign out"; } }, 4000); return; }
+    closeTrip(); signOut(auth);
+  } }, "Sign out");
   return h("div", { class: "brand" }, h("div", { class: "top" },
     h("span", { class: "name", text: "MoneTrip" }),
     me ? h("span", { class: "who" }, me.photoURL ? h("img", { src: me.photoURL, alt: "" }) : null,
-      h("span", { text: me.displayName || me.email || "" }),
-      h("button", { class: "ghost", onclick: () => { closeTrip(); signOut(auth); } }, "Sign out")) : null),
+      h("span", { text: guest ? (firstName() || "Guest") + " · guest" : (me.displayName || me.email || "") }),
+      guest ? h("button", { class: "ghost", style: "color:var(--accent)", onclick: saveWithGoogle }, "Save with Google") : null, out) : null),
     h("span", { class: "tag", text: "Strenge Rechnung, gute Freunde." }));
 }
 function render() {
@@ -117,14 +136,31 @@ function render() {
   if (ae) document.getElementById(ae)?.focus();
 }
 function signInView() {
-  const join = /^#join-[A-Za-z0-9]{6}$/.test(location.hash);
-  return [brand(), h("div", { class: "panel signin" },
-    h("h1", { text: join ? "You're invited to a trip" : "Split trip costs without the awkward maths" }),
-    h("p", { class: "muted", text: "Log who paid what, in any currency. When the trip is over, MoneTrip works out who pays whom, with as few transfers as possible." }),
-    h("button", { class: "primary gbtn", onclick: async () => {
-      const p = new GoogleAuthProvider();
-      try { await signInWithPopup(auth, p); } catch (e) { if (e.code === "auth/popup-blocked") signInWithRedirect(auth, p); else toast("Sign-in didn't finish. Try again."); }
-    } }, "Sign in with Google"))];
+  const code = (location.hash.match(/^#join-([A-Za-z0-9]{6})$/) || [])[1];
+  const gerr = h("p", { class: "err", hidden: true });
+  const guest = h("form", { class: "panel", onsubmit: async e => {
+      e.preventDefault(); const f = e.target, name = f.gfirst.value.trim(), c = (code || f.gcode.value).toUpperCase().trim();
+      if (!name || c.length !== 6) { gerr.hidden = false; gerr.textContent = !name ? "Enter your first name." : "Enter the six-character trip code."; return; }
+      f.querySelector("button[type=submit]").disabled = true;
+      guestName = name; if (!code) location.hash = "join-" + c;
+      try { const r = await signInAnonymously(auth); await updateProfile(r.user, { displayName: name }); }
+      catch { guestName = null; gerr.hidden = false; gerr.textContent = "Couldn't join as a guest. Try again, or sign in with Google."; f.querySelector("button[type=submit]").disabled = false; }
+    } },
+    h("h2", { text: code ? "Join as a guest" : "Got a trip code?" }),
+    h("p", { class: "muted", text: "Just your first name. No account needed." }),
+    h("div", { class: "row" },
+      h("label", { class: "grow" }, "First name", h("input", { id: "gfirst", name: "gfirst", required: true, maxlength: 30, autocomplete: "given-name", placeholder: "Anna" })),
+      code ? null : h("label", { style: "flex:0 1 140px" }, "Trip code", h("input", { id: "gcode", name: "gcode", maxlength: 6, required: true, autocapitalize: "characters", placeholder: "K7Q2MX", style: "font-family:var(--mono);letter-spacing:.15em;text-transform:uppercase" })),
+      h("button", { class: "primary", type: "submit" }, "Join trip")), gerr);
+  const google = h("div", { class: "panel signin" },
+    h("h2", { text: code ? "Or use your Google account" : "Start your own trip" }),
+    h("p", { class: "muted", text: code ? "Then you can open the trip on any device." : "Sign in to create trips and invite friends." }),
+    h("button", { class: code ? "gbtn" : "primary gbtn", onclick: googleSignIn }, "Sign in with Google"));
+  return [brand(),
+    h("div", { class: "panel signin" },
+      h("h1", { text: code ? "You're invited to a trip" : "Split trip costs without the awkward maths" }),
+      h("p", { class: "muted", text: "Log who paid what, in any currency. When the trip is over, MoneTrip works out who pays whom, with as few transfers as possible." })),
+    ...(code ? [guest, google] : [google, guest])];
 }
 function homeView() {
   const err = h("p", { class: "err", hidden: true });
@@ -138,7 +174,7 @@ function homeView() {
       h("label", { class: "grow" }, "Trip name", h("input", { id: "tname", name: "tname", placeholder: "Istanbul, November", required: true, maxlength: 60 })),
       h("label", { style: "flex:0 0 110px" }, "Currency", h("select", { id: "tccy", name: "tccy" }, CURRENCIES.map(c => h("option", { value: c, selected: c === "EUR" }, c))))),
     h("div", { class: "row" },
-      h("label", { class: "grow" }, "Your name on this trip", h("input", { id: "tnick", name: "tnick", value: (me.displayName || "").split(" ")[0], required: true, maxlength: 30 })),
+      h("label", { class: "grow" }, "Your name on this trip", h("input", { id: "tnick", name: "tnick", value: firstName(), required: true, maxlength: 30 })),
       h("button", { class: "primary", type: "submit" }, "Create trip")), err);
   const jerr = h("p", { class: "err", hidden: true });
   const joinForm = h("form", { class: "panel", onsubmit: async e => {
@@ -173,10 +209,16 @@ function tripView() {
     h("div", { style: "text-align:right" }, h("div", { class: "lbl", text: "Trip code" }), h("div", { class: "ref", text: t.code })),
     h("div", { class: "meta" }, h("span", {}, "Total ", h("b", { class: "num", text: money(total, ccy) })), h("span", {}, `${ids.length} ${ids.length === 1 ? "person" : "people"}`), h("span", {}, `${cur.expenses.length} expenses`), h("span", {}, "Settles in " + ccy))));
 
+  if (!mine && guestName && !cur.autoJoined) {
+    cur.autoJoined = true; const n = guestName;
+    const match = ids.find(id => !t.members[id].uid && t.members[id].name.trim().toLowerCase() === n.toLowerCase());
+    (match ? claimMember(match) : addMember(n, true)).then(() => toast("Welcome, " + n + "!")).catch(() => { cur.autoJoined = false; toast("Couldn't add you. Pick your name below."); });
+    return [...out, h("div", { class: "panel" }, h("p", { class: "muted", text: "Adding you to the trip…" }))];
+  }
   if (!mine || ui.joinPick) {
     const free = ids.filter(id => !t.members[id].uid);
     const nf = h("form", { class: "row", onsubmit: async e => { e.preventDefault(); const n = e.target.jn.value.trim(); if (n) await addMember(n, true); } },
-      h("label", { class: "grow" }, "Join as a new person", h("input", { id: "jn", name: "jn", value: (me.displayName || "").split(" ")[0], required: true, maxlength: 30 })),
+      h("label", { class: "grow" }, "Join as a new person", h("input", { id: "jn", name: "jn", value: firstName(), required: true, maxlength: 30 })),
       h("button", { class: "primary", type: "submit" }, "Join"));
     out.push(h("div", { class: "panel" }, h("h2", { text: "Which one are you?" }),
       free.length ? h("div", { class: "chips" }, free.map(id => h("button", { onclick: () => claimMember(id) }, "I'm " + t.members[id].name))) : null, nf,
