@@ -1,21 +1,21 @@
 *,*::before,*::after{box-sizing:border-box}
 /* Layout: a single narrow column — trips list, then a trip "ticket" with balances, payback plan and expense ledger. */
 :root{
-  --bg:#f7f3f5; --surface:#ffffff; --ink:#23161c; --muted:#6c5e65; --line:#e7dbe1;
-  --accent:#e0067a; --accent-ink:#ffffff; --accent-soft:#ffe1f0;
-  --owe:#b4471f; --get:#1a7a4c; --warn:#9a6a00; --warn-soft:#fbf1d8;
+  --bg:#f2f4f3; --surface:#ffffff; --ink:#15231f; --muted:#5d6b67; --line:#d9e0dd;
+  --accent:#0f6b5a; --accent-ink:#ffffff; --accent-soft:#dcefe9;
+  --owe:#b23a2e; --get:#1a7a4c; --warn:#9a6a00; --warn-soft:#fbf1d8;
   --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
   --body:"Figtree",ui-sans-serif,system-ui,sans-serif;
   --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#161114; --surface:#211a1e; --ink:#f2e9ed; --muted:#a8979f; --line:#3a2d34;
-  --accent:#ff4fa7; --accent-ink:#3a0020; --accent-soft:#4a1532;
-  --owe:#f2a06e; --get:#6fd39f; --warn:#e7bb57; --warn-soft:#352c14; color-scheme:dark}}
+  --bg:#0f1715; --surface:#17221f; --ink:#e6eeeb; --muted:#93a39e; --line:#2a3834;
+  --accent:#4fc2a4; --accent-ink:#06201a; --accent-soft:#1d3a33;
+  --owe:#f08a7e; --get:#6fd39f; --warn:#e7bb57; --warn-soft:#352c14; color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#161114; --surface:#211a1e; --ink:#f2e9ed; --muted:#a8979f; --line:#3a2d34;
-  --accent:#ff4fa7; --accent-ink:#3a0020; --accent-soft:#4a1532;
-  --owe:#f2a06e; --get:#6fd39f; --warn:#e7bb57; --warn-soft:#352c14; color-scheme:dark}
+  --bg:#0f1715; --surface:#17221f; --ink:#e6eeeb; --muted:#93a39e; --line:#2a3834;
+  --accent:#4fc2a4; --accent-ink:#06201a; --accent-soft:#1d3a33;
+  --owe:#f08a7e; --get:#6fd39f; --warn:#e7bb57; --warn-soft:#352c14; color-scheme:dark}
 body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--body)}
 .wrap{max-width:720px;margin:0 auto;padding-block:24px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:20px}
 h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;line-height:1.15}
