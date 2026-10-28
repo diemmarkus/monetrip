@@ -88,3 +88,5 @@ details summary{cursor:pointer;font-weight:600;color:var(--accent)}
 .gbtn{display:inline-flex;align-items:center;gap:10px}
 .who{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted)}
 .who img{width:24px;height:24px;border-radius:50%}
+.panel.danger{border-color:var(--owe)}
+.danger-btn{background:var(--owe);border-color:var(--owe);color:var(--surface)}

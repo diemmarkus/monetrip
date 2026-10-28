@@ -93,8 +93,17 @@ async function joinByCode(code) {
   const c = await getDoc(doc(db, "codes", code));
   if (!c.exists()) throw new Error("No trip has that code. Check the six characters and try again.");
   const tripId = c.data().tripId;
-  if (!trips.some(t => t.id === tripId)) await updateDoc(doc(db, "trips", tripId), { memberUids: arrayUnion(me.uid) });
+  if (!trips.some(t => t.id === tripId)) {
+    try { await updateDoc(doc(db, "trips", tripId), { memberUids: arrayUnion(me.uid) }); }
+    catch { throw new Error("No trip has that code. It may have been deleted."); }
+  }
   openTrip(tripId);
+}
+async function deleteTrip(t) {
+  const exps = cur.expenses.slice();
+  for (const e of exps) await deleteDoc(doc(db, "trips", t.id, "expenses", e.id));
+  const id = t.id; closeTrip();
+  await deleteDoc(doc(db, "trips", id));
 }
 async function claimMember(mid) { await updateDoc(doc(db, "trips", cur.trip.id), { [`members.${mid}.uid`]: me.uid }); ui.joinPick = false; render(); }
 async function addMember(name, withMe) {
@@ -328,6 +337,22 @@ function tripView() {
           try { await navigator.clipboard.writeText(text + " " + link); toast("Invite link copied"); } catch { toast(link); }
         } }, "Share invite link"))),
     gform, h("button", { class: "ghost", style: "align-self:flex-start", onclick: () => { ui.joinPick = true; render(); } }, "Not you? Switch person")));
+
+  if (t.createdBy === me.uid) {
+    const n = cur.expenses.length;
+    out.push(ui.confirmDelete === t.id
+      ? h("div", { class: "panel danger" },
+          h("h2", { text: `Delete ${t.name}?` }),
+          h("p", { text: `This removes the trip${n ? ` and its ${n} ${n === 1 ? "expense" : "expenses"}` : ""} for everyone on it. This can't be undone.` }),
+          h("div", { class: "row" },
+            h("button", { class: "danger-btn", onclick: async ev => {
+              ev.currentTarget.disabled = true; ev.currentTarget.textContent = "Deleting…";
+              try { const name = t.name; await deleteTrip(t); ui.confirmDelete = null; history.replaceState(null, "", location.pathname); render(); toast(name + " deleted"); }
+              catch { toast("Couldn't delete the trip. Try again."); ui.confirmDelete = null; render(); }
+            } }, "Delete trip"),
+            h("button", { onclick: () => { ui.confirmDelete = null; render(); } }, "Cancel")))
+      : h("button", { class: "ghost", style: "align-self:center;color:var(--owe)", onclick: () => { ui.confirmDelete = t.id; render(); } }, "Delete trip"));
+  }
   return out;
 }
 
