@@ -180,3 +180,4 @@ input[type=date]{min-height:44px;-webkit-appearance:none;appearance:none}
 @keyframes flash-in{0%,40%{background:var(--accent-soft)}100%{background:var(--surface)}}
 .fx-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .fx-conv{font-family:var(--mono);font-size:14px;color:var(--ink);font-variant-numeric:tabular-nums}
+.fx-info{font-size:13px;color:var(--muted);margin:0}
