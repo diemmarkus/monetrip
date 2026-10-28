@@ -90,3 +90,13 @@ details summary{cursor:pointer;font-weight:600;color:var(--accent)}
 .who img{width:24px;height:24px;border-radius:50%}
 .panel.danger{border-color:var(--owe)}
 .danger-btn{background:var(--owe);border-color:var(--owe);color:var(--surface)}
+.xform>label{width:100%}
+.money{display:flex;border:1px solid var(--line);border-radius:8px;background:var(--bg);overflow:hidden}
+.money:focus-within{outline:2px solid var(--accent);outline-offset:-1px}
+.money input{border:none;border-radius:0;flex:1 1 auto;min-width:0;font-family:var(--mono);font-size:17px;outline:none}
+.money select{border:none;border-left:1px solid var(--line);border-radius:0;flex:0 0 96px;width:96px;background:var(--surface);font-weight:600;outline:none}
+.fx{display:flex;flex-direction:column;gap:6px;padding:12px;border-radius:8px;background:var(--accent-soft)}
+.fx-line{flex-direction:row;align-items:center;gap:8px;color:var(--ink);font-family:var(--mono);font-size:15px}
+.fx-line input{width:9ch;flex:0 0 auto;min-height:38px;padding:6px 8px;font-family:var(--mono);background:var(--surface)}
+.fx-note{font-size:13px;color:var(--muted)}
+.xform>button[type=submit]{width:100%}

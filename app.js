@@ -140,8 +140,11 @@ function brand() {
     h("span", { class: "tag", text: "Strenge Rechnung, gute Freunde." }));
 }
 function render() {
-  const ae = document.activeElement?.id;
+  const ae = document.activeElement?.id, saved = {};
+  for (const el of app.querySelectorAll("input[id],select[id]")) saved[el.id] = el.type === "checkbox" ? el.checked : el.value;
   app.replaceChildren(...(!me ? signInView() : cur.id ? tripView() : homeView()));
+  for (const [id, v] of Object.entries(saved)) { const el = document.getElementById(id); if (!el) continue; if (el.type === "checkbox") el.checked = v; else el.value = v; }
+  app.querySelector(".xform")?._resync?.();
   if (ae) document.getElementById(ae)?.focus();
 }
 function signInView() {
@@ -276,15 +279,26 @@ function tripView() {
 
   /* add expense */
   const xerr = h("p", { class: "err", hidden: true });
-  const rateHint = h("span", { class: "muted", style: "font-size:12px;font-weight:400" });
-  const rateWrap = h("label", { class: "grow", hidden: true }, "", h("input", { id: "xrate", name: "xrate", inputmode: "decimal", placeholder: "e.g. 0,027" }), rateHint);
-  const syncRate = f => {
-    const c = f.xccy.value; rateWrap.hidden = c === ccy; rateWrap.firstChild.textContent = `Rate: 1 ${c} = ? ${ccy}`; f.xrate.required = c !== ccy;
-    const a = c === ccy ? null : autoRate(c, ccy);
-    if (a) { f.xrate.value = String(a).replace(".", ","); rateHint.textContent = `ECB rate from ${new Date(fx.date).toLocaleDateString("de-AT", { day: "numeric", month: "short" })}. Change it if your bank charged a different rate.`; }
-    else { f.xrate.value = ""; rateHint.textContent = c === ccy ? "" : "No automatic rate available right now. Enter it yourself."; }
+  const rateNote = h("p", { class: "fx-note" });
+  const rateBox = h("div", { class: "fx", hidden: true },
+    h("label", { class: "fx-line", for: "xrate" }, h("span", { id: "fxfrom" }), h("input", { id: "xrate", name: "xrate", inputmode: "decimal", placeholder: "0,00", "aria-label": "Exchange rate" }), h("span", { text: ccy })),
+    rateNote);
+  const shortDate = d => new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  const preview = f => {
+    const c = f.xccy.value; if (c === ccy) return;
+    const amt = parseNum(f.xamt.value), r = parseNum(f.xrate.value);
+    const conv = amt > 0 && r > 0 ? "≈ " + money(Math.round(amt * r * 100), ccy) + " · " : "";
+    rateNote.textContent = conv + (f.dataset.auto === "1" ? `ECB rate, ${shortDate(fx.date)}. Edit it if your bank charged a different rate.` : "Enter the rate your bank used.");
   };
-  const form = h("form", { class: "panel", onsubmit: async e => {
+  const syncRate = f => {
+    const c = f.xccy.value; rateBox.hidden = c === ccy; f.xrate.required = c !== ccy;
+    $("#fxfrom", rateBox).textContent = "1 " + c + " =";
+    const a = c === ccy ? null : autoRate(c, ccy);
+    f.dataset.auto = a ? "1" : "";
+    f.xrate.value = a ? String(a).replace(".", ",") : "";
+    preview(f);
+  };
+  const form = h("form", { class: "panel xform", oninput: e => { if (e.target.id === "xrate") e.currentTarget.dataset.auto = ""; preview(e.currentTarget); }, onsubmit: async e => {
       e.preventDefault(); const f = e.target; xerr.hidden = true;
       const amount = parseNum(f.xamt.value), c = f.xccy.value, rate = c === ccy ? 1 : parseNum(f.xrate.value);
       const split = [...f.querySelectorAll("input[name=xsplit]:checked")].map(i => i.value);
@@ -292,20 +306,29 @@ function tripView() {
       if (bad) { xerr.hidden = false; xerr.textContent = bad; return; }
       const btn = f.querySelector("button[type=submit]"); btn.disabled = true;
       try { await setDoc(doc(db, "trips", t.id, "expenses", rid()), { desc: f.xdesc.value.trim(), amount, currency: c, rate, paidBy: f.xpaid.value, split, at: Date.now(), by: mine });
-        f.reset(); syncRate(f); toast("Expense added"); }
+        f.xdesc.value = ""; f.xamt.value = ""; preview(f); toast("Expense added"); }
       catch { xerr.hidden = false; xerr.textContent = "Couldn't save the expense. Try again."; }
       btn.disabled = false;
     } },
     h("h2", { text: "Add an expense" }),
-    h("div", { class: "row" },
-      h("label", { class: "grow" }, "What for", h("input", { id: "xdesc", name: "xdesc", placeholder: "Dinner in Karaköy", maxlength: 80 })),
-      h("label", { style: "flex:0 1 120px" }, "Amount", h("input", { id: "xamt", name: "xamt", inputmode: "decimal", placeholder: "0,00" })),
-      h("label", { style: "flex:0 0 96px" }, "Currency", h("select", { id: "xccy", name: "xccy", onchange: e => syncRate(e.target.form) }, CURRENCIES.map(c => h("option", { value: c, selected: c === ccy }, c))))),
-    h("div", { class: "row" }, rateWrap,
-      h("label", { class: "grow" }, "Paid by", h("select", { id: "xpaid", name: "xpaid" }, ids.map(id => h("option", { value: id, selected: id === mine }, memberName(t, id) + (id === mine ? " (you)" : "")))))),
-    h("div", {}, h("h3", { text: "Split equally between", style: "margin-bottom:6px" }),
+    h("label", {}, "What for", h("input", { id: "xdesc", name: "xdesc", placeholder: "Dinner, taxi, hotel…", maxlength: 80, autocomplete: "off" })),
+    h("label", {}, "Amount",
+      h("span", { class: "money" },
+        h("input", { id: "xamt", name: "xamt", inputmode: "decimal", placeholder: "0,00", autocomplete: "off" }),
+        h("select", { id: "xccy", name: "xccy", "aria-label": "Currency", onchange: e => syncRate(e.target.form) }, CURRENCIES.map(c => h("option", { value: c, selected: c === ccy }, c))))),
+    rateBox,
+    h("label", {}, "Paid by", h("select", { id: "xpaid", name: "xpaid" }, ids.map(id => h("option", { value: id, selected: id === mine }, memberName(t, id) + (id === mine ? " (you)" : ""))))),
+    h("div", {}, h("h3", { text: "Split equally between", style: "margin-bottom:8px" }),
       h("div", { class: "checks" }, ids.map(id => h("label", {}, h("input", { type: "checkbox", name: "xsplit", value: id, checked: true, id: "xs-" + id }), memberName(t, id))))),
-    h("div", { class: "row", style: "justify-content:flex-end" }, h("button", { class: "primary", type: "submit" }, "Add expense")), xerr);
+    xerr,
+    h("button", { class: "primary", type: "submit" }, "Add expense"));
+  form._resync = () => {
+    const c = form.xccy.value; rateBox.hidden = c === ccy; form.xrate.required = c !== ccy;
+    $("#fxfrom", rateBox).textContent = "1 " + c + " =";
+    const a = c === ccy ? null : autoRate(c, ccy);
+    form.dataset.auto = a && parseNum(form.xrate.value) === a ? "1" : "";
+    preview(form);
+  };
   out.push(form);
 
   /* expenses */
@@ -319,7 +342,7 @@ function tripView() {
             if (b.dataset.sure) { await deleteDoc(doc(db, "trips", t.id, "expenses", e.id)); toast("Expense deleted"); }
             else { b.dataset.sure = "1"; b.textContent = "Delete?"; setTimeout(() => { if (b.isConnected) { delete b.dataset.sure; b.textContent = "✕"; } }, 3000); }
           } }, "✕")),
-        h("span", { class: "sub", text: `${memberName(t, e.paidBy)} paid · split ${e.split.length} ways${e.currency !== ccy ? ` · ${money(base, ccy)} at ${e.rate}` : ""} · ${new Date(e.at).toLocaleDateString("de-AT", { day: "numeric", month: "short" })}` }));
+        h("span", { class: "sub", text: `${memberName(t, e.paidBy)} paid · split ${e.split.length} ways${e.currency !== ccy ? ` · ${money(base, ccy)} at ${e.rate}` : ""} · ${new Date(e.at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}` }));
     })) : h("div", { class: "empty", text: "No expenses yet. Add the first one above, like the hotel or a dinner." })));
 
   /* people & invite */
