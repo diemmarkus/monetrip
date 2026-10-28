@@ -438,7 +438,11 @@ function tripView() {
   const iconBtn = h("button", { type: "button", class: "icon-pick", "aria-label": "Choose an icon", "aria-expanded": "false",
     onclick: () => { picks.hidden = !picks.hidden; iconBtn.setAttribute("aria-expanded", String(!picks.hidden)); } });
   const pick = ic => { form.xicon.value = ic; picks.hidden = true; iconBtn.setAttribute("aria-expanded", "false"); form._syncIcon(); };
+  const firstEmoji = v => { for (const { segment } of new Intl.Segmenter().segment(v)) if (/\p{Extended_Pictographic}|\p{Regional_Indicator}/u.test(segment)) return segment; return ""; };
   const picks = h("div", { class: "picks", hidden: true, role: "group", "aria-label": "Icons" },
+    h("input", { class: "emoji-in", placeholder: "Or type any emoji…", "aria-label": "Type an emoji", autocomplete: "off", enterkeyhint: "done",
+      oninput: e => { const em = firstEmoji(e.target.value); if (em) { e.target.value = ""; pick(em); } },
+      onkeydown: e => { if (e.key === "Enter") e.preventDefault(); } }),
     PICKS.map(ic => h("button", { type: "button", onclick: () => pick(ic) }, ic)),
     h("button", { type: "button", class: "auto", onclick: () => pick("") }, "Auto"));
   const form = h("form", { class: "panel xform", oninput: e => { if (e.target.id === "xrate") e.currentTarget.dataset.auto = ""; if (e.target.id === "xdesc") form._syncIcon(); preview(e.currentTarget); }, onsubmit: async e => {
@@ -483,7 +487,7 @@ function tripView() {
     const own = form.xicon.value;
     iconBtn.textContent = own || suggestIcon(t, form.xdesc.value);
     iconBtn.classList.toggle("set", !!own);
-    for (const b of picks.children) b.setAttribute("aria-pressed", String(b.classList.contains("auto") ? !own : b.textContent === own));
+    for (const b of picks.querySelectorAll("button")) b.setAttribute("aria-pressed", String(b.classList.contains("auto") ? !own : b.textContent === own));
   };
   form._syncIcon();
   form._resync = () => {
