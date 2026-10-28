@@ -152,7 +152,7 @@ function brand() {
     h("span", { class: "name", text: "MoneTrip" }),
     me ? h("span", { class: "who" }, me.photoURL ? h("img", { src: me.photoURL, alt: "" }) : null,
       h("span", { text: guest ? (firstName() || "Guest") + " · guest" : (me.displayName || me.email || "") }),
-      guest ? h("button", { class: "ghost", style: "color:var(--accent)", onclick: saveWithGoogle }, "Save with Google") : null, out) : null),
+      guest ? h("button", { class: "ghost", style: "color:var(--accent-text)", onclick: saveWithGoogle }, "Save with Google") : null, out) : null),
     h("span", { class: "tag", text: "Strenge Rechnung, gute Freunde." }));
 }
 function render() {
@@ -333,7 +333,7 @@ function tripView() {
         h("span", {}, h("b", { text: memberName(t, id) }), id === mine ? h("span", { class: "muted", text: " (you)" }) : null),
         h("span", { class: "num " + (b > 0 ? "pos" : b < 0 ? "neg" : "muted"), text: (b > 0 ? "+" : "") + money(b, ccy) }),
         h("span", { class: "sub", text: `paid ${money(paid[id], ccy)} · share ${money(share[id], ccy)}` }),
-        h("div", { class: "bar" }, h("i", { style: `width:${Math.abs(b) / maxAbs * 100}%;background:var(${b >= 0 ? "--get" : "--owe"})` })));
+        h("div", { class: "bar" }, h("i", { style: `width:${Math.abs(b) / maxAbs * 100}%;background:var(${b >= 0 ? "--bar-pos" : "--bar-neg"})` })));
     }))));
 
   /* add expense */
@@ -449,7 +449,7 @@ function tripView() {
               catch { toast("Couldn't delete the trip. Try again."); ui.confirmDelete = null; render(); }
             } }, "Delete trip"),
             h("button", { onclick: () => { ui.confirmDelete = null; render(); } }, "Cancel")))
-      : h("button", { class: "ghost", style: "align-self:center;color:var(--owe)", onclick: () => { ui.confirmDelete = t.id; render(); } }, "Delete trip"));
+      : h("button", { class: "ghost", style: "align-self:center;color:var(--danger)", onclick: () => { ui.confirmDelete = t.id; render(); } }, "Delete trip"));
   }
   return out;
 }
