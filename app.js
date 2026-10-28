@@ -544,7 +544,6 @@ function tripView() {
   out.push(h("div", { class: "panel" }, h("h2", { text: "People" }),
     h("div", { class: "chips" }, ids.map(id => h("span", { class: "chip" + (id === mine ? " you" : "") }, memberName(t, id), !t.members[id].uid ? h("small", { text: "not joined" }) : null))),
     h("div", {}, h("h3", { text: "Invite", style: "margin-bottom:6px" }),
-      h("p", { class: "muted", text: "Send friends this link. They only need to type their first name." }),
       h("div", { class: "linkbox" },
         h("input", { id: "invlink", readonly: true, value: link, "aria-label": "Invite link", onfocus: e => e.target.select() }),
         h("button", { type: "button", onclick: async () => {
