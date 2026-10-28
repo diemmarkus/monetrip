@@ -500,6 +500,9 @@ function tripView() {
   const lastOwn = cur.expenses.filter(x => x.by === mine && x.kind !== "payment").reduce((best, x) => !best || (x.at || 0) > (best.at || 0) ? x : best, null);
   const lastSplit = (lastOwn?.split || []).filter(id => ids.includes(id));
   const defaultSplit = new Set(lastSplit.length ? lastSplit : ids);
+  // Paid by: whoever paid in this person's own last expense, else themselves.
+  const defaultPaid = lastOwn && ids.includes(lastOwn.paidBy) ? lastOwn.paidBy : mine;
+  const byName = ids.slice().sort((a, b) => memberName(t, a).localeCompare(memberName(t, b), "de", { sensitivity: "base" }));
   if (ui.editing && !editing && cur.expenses.length) ui.editing = null;
   const iconBtn = h("button", { type: "button", class: "icon-pick", "aria-label": "Choose an icon", "aria-expanded": "false",
     onclick: () => { picks.hidden = !picks.hidden; iconBtn.setAttribute("aria-expanded", String(!picks.hidden)); } });
@@ -546,7 +549,7 @@ function tripView() {
         h("select", { id: "xccy", name: "xccy", "aria-label": "Currency", onchange: e => syncRate(e.target.form) }, CURRENCIES.map(c => h("option", { value: c, selected: c === (t.localCurrency || ccy) }, c))))),
     rateBox,
     h("div", { class: "pair" },
-      h("label", {}, "Paid by", h("select", { id: "xpaid", name: "xpaid" }, ids.map(id => h("option", { value: id, selected: id === mine }, memberName(t, id) + (id === mine ? " (you)" : ""))))),
+      h("label", {}, "Paid by", h("select", { id: "xpaid", name: "xpaid" }, byName.map(id => h("option", { value: id, selected: id === defaultPaid }, memberName(t, id) + (id === mine ? " (you)" : ""))))),
       h("label", {}, "Date", h("input", { id: "xdate", name: "xdate", type: "date", value: isoDay(Date.now()), max: isoDay(Date.now() + 864e5 * 366) }))),
     h("div", { class: "forfield" },
       h("span", { class: "flabel", id: "forlbl", text: "For" }),
@@ -554,7 +557,7 @@ function tripView() {
         onclick: ev => { ui.forOpen = !ui.forOpen; const b = ev.currentTarget; b.setAttribute("aria-expanded", String(ui.forOpen)); b.form.querySelector("#forlist").hidden = !ui.forOpen; } },
         h("span", { id: "forsum" }), h("span", { class: "chev", "aria-hidden": "true" })),
       h("div", { class: "checks", id: "forlist", role: "group", "aria-label": "Split equally between", hidden: !ui.forOpen },
-        ids.map(id => h("label", {}, h("input", { type: "checkbox", name: "xsplit", value: id, checked: defaultSplit.has(id), id: "xs-" + id }), memberName(t, id))))),
+        byName.map(id => h("label", {}, h("input", { type: "checkbox", name: "xsplit", value: id, checked: defaultSplit.has(id), id: "xs-" + id }), memberName(t, id))))),
     xerr,
     editing
       ? h("div", { class: "pair" },
