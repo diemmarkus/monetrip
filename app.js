@@ -127,6 +127,30 @@ async function addMember(name, withMe) {
   if (withMe) { ui.joinPick = false; render(); }
 }
 
+/* ---------- settle up: record a payment ---------- */
+async function markPaid(t, x, btn) {
+  btn.disabled = true;
+  const id = rid(), now = Date.now();
+  const payment = { kind: "payment", desc: "Payment", amount: x.amount / 100, currency: t.settlement.currency || t.currency, rate: 1,
+    paidBy: x.from, split: [x.to], at: now, date: isoDay(now), by: myMemberId(t) };
+  try {
+    ui.justAdded = { id, t0: now };
+    await setDoc(doc(db, "trips", t.id, "expenses", id), payment);
+    // The rest of the plan still settles the remaining balances exactly, so just drop this transfer.
+    const before = t.settlement;
+    const rest = before.transfers.filter(y => !(y.from === x.from && y.to === x.to));
+    const count = cur.expenses.filter(e => e.id !== id).length + 1;
+    await updateDoc(doc(db, "trips", t.id), { settlement: rest.length ? { ...before, transfers: rest, at: Date.now(), count } : null, paid: {} });
+    toast(rest.length ? "Payment recorded" : "All settled up 🎉", { label: "Undo", run: async () => {
+      try {
+        await deleteDoc(doc(db, "trips", t.id, "expenses", id));
+        await updateDoc(doc(db, "trips", t.id), { settlement: { ...before, at: Date.now(), count: Math.max(0, count - 1) }, paid: {} });
+        toast("Payment undone");
+      } catch { toast("Couldn't undo. Delete the payment from the list instead."); }
+    } });
+  } catch { btn.disabled = false; toast("Couldn't record the payment. Try again."); }
+}
+
 /* ---------- expense list: swipe & delete ---------- */
 async function deleteExpense(t, e) {
   const { id, ...data } = e;
@@ -361,7 +385,8 @@ function tripView() {
   if (!t) return [brand(), back, h("div", { class: "panel" }, h("p", { class: "muted", text: cur.missing ? "This trip doesn't exist or you're not on it. Ask for a new invite link." : "Loading trip…" }))];
   const mine = myMemberId(t), ccy = t.currency, ids = Object.keys(t.members || {});
   const { bal, paid, share } = balances(t.members, cur.expenses);
-  const total = cur.expenses.reduce((s, e) => s + Math.round(e.amount * (e.rate || 1) * 100), 0);
+  const spends = cur.expenses.filter(e => e.kind !== "payment");
+  const total = spends.reduce((s, e) => s + Math.round(e.amount * (e.rate || 1) * 100), 0);
   const out = [brand(), back];
 
   const isAdmin = t.createdBy === me.uid;
@@ -387,7 +412,7 @@ function tripView() {
   out.push(h("div", { class: "ticket" },
     h("div", { style: "min-width:0" }, h("div", { class: "lbl", text: "Trip" }), titleBlock),
     h("div", { style: "text-align:right" }, h("div", { class: "lbl", text: "Trip code" }), h("div", { class: "ref", text: t.code })),
-    h("div", { class: "meta" }, h("span", {}, "Total ", h("b", { class: "num", text: money(total, ccy) })), h("span", {}, `${ids.length} ${ids.length === 1 ? "person" : "people"}`), h("span", {}, `${cur.expenses.length} expenses`), h("span", {}, (t.localCurrency && t.localCurrency !== ccy ? "Paying in " + t.localCurrency + " · " : "") + "Settles in " + ccy))));
+    h("div", { class: "meta" }, h("span", {}, "Total ", h("b", { class: "num", text: money(total, ccy) })), h("span", {}, `${ids.length} ${ids.length === 1 ? "person" : "people"}`), h("span", {}, `${spends.length} ${spends.length === 1 ? "expense" : "expenses"}`), h("span", {}, (t.localCurrency && t.localCurrency !== ccy ? "Paying in " + t.localCurrency + " · " : "") + "Settles in " + ccy))));
 
   if (!mine && guestName && !cur.autoJoined) {
     cur.autoJoined = true; const n = guestName;
@@ -412,16 +437,15 @@ function tripView() {
     const stale = cur.expenses.some(e => (e.changed || e.at || 0) > s.at) || s.count !== cur.expenses.length;
     const minePay = s.transfers.filter(x => x.from === mine || x.to === mine), others = s.transfers.filter(x => !(x.from === mine || x.to === mine));
     const row = x => {
-      const k = x.from + "_" + x.to, done = !!(t.paid || {})[k], isMine = x.from === mine || x.to === mine;
+      const isMine = x.from === mine || x.to === mine;
       const label = x.from === mine ? ["You pay ", h("b", { text: memberName(t, x.to) })] : x.to === mine ? [h("b", { text: memberName(t, x.from) }), " pays you"] : [h("b", { text: memberName(t, x.from) }), h("span", { class: "arrow" }, " → "), h("b", { text: memberName(t, x.to) })];
-      return h("div", { class: "pay" + (isMine ? " mine" : "") + (done ? " done" : "") }, h("span", {}, label), h("span", { class: "num", text: money(x.amount, s.currency || ccy) }),
-        h("button", { class: done ? "ghost" : "", onclick: () => updateDoc(doc(db, "trips", t.id), { [`paid.${k}`]: !done }) }, done ? "Undo" : "Mark paid"));
+      return h("div", { class: "pay" + (isMine ? " mine" : "") }, h("span", {}, label), h("span", { class: "num", text: money(x.amount, s.currency || ccy) }),
+        h("button", { onclick: ev => markPaid(t, x, ev.currentTarget) }, "Mark paid"));
     };
-    const allDone = s.transfers.length && s.transfers.every(x => (t.paid || {})[x.from + "_" + x.to]);
     out.push(h("div", { class: "panel" },
       h("div", { class: "top" }, h("h2", { text: "Pay back" }),
         h("span", { class: "head-right" },
-          allDone ? h("span", { class: "pill ok", text: "All paid" }) : h("span", { class: "muted", text: `${s.transfers.length} ${s.transfers.length === 1 ? "transfer" : "transfers"}` }),
+          h("span", { class: "muted", text: `${s.transfers.length} ${s.transfers.length === 1 ? "transfer" : "transfers"} left` }),
           h("button", { class: "icon-btn close-btn", title: "Cancel settle up", "aria-label": "Cancel settle up", onclick: async ev => {
             const b = ev.currentTarget;
             if (!b.dataset.sure) { b.dataset.sure = "1"; b.classList.add("confirm"); b.textContent = "Cancel?"; setTimeout(() => { if (b.isConnected) { delete b.dataset.sure; b.classList.remove("confirm"); b.textContent = "✕"; } }, 3000); return; }
@@ -430,6 +454,7 @@ function tripView() {
             catch { b.disabled = false; toast("Couldn't cancel. Try again."); }
           } }, "✕"))),
       stale ? h("p", { class: "notice", text: "Expenses changed after this plan was made. Settle up again to update it." }) : null,
+      s.transfers.length ? h("p", { class: "muted small", text: "Marking a transfer as paid adds it to the expenses as a payment, so you can settle one at a time." }) : null,
       !s.transfers.length ? h("p", { class: "muted", text: "Everyone is even. Nobody needs to pay anything." }) : null,
       minePay.length ? h("h3", { text: "Your list" }) : s.transfers.length ? h("p", { class: "muted", text: "You're even. Nothing to pay or collect." }) : null,
       minePay.map(row), others.length ? h("h3", { text: "Everyone else" }) : null, others.map(row)));
@@ -479,7 +504,7 @@ function tripView() {
   };
   const editing = ui.editing ? cur.expenses.find(x => x.id === ui.editing) : null;
   // Tick the same people as in this person's own most recent expense; everyone if they haven't added one yet.
-  const lastOwn = cur.expenses.filter(x => x.by === mine).reduce((best, x) => !best || (x.at || 0) > (best.at || 0) ? x : best, null);
+  const lastOwn = cur.expenses.filter(x => x.by === mine && x.kind !== "payment").reduce((best, x) => !best || (x.at || 0) > (best.at || 0) ? x : best, null);
   const lastSplit = (lastOwn?.split || []).filter(id => ids.includes(id));
   const defaultSplit = new Set(lastSplit.length ? lastSplit : ids);
   if (ui.editing && !editing && cur.expenses.length) ui.editing = null;
@@ -573,19 +598,19 @@ function tripView() {
     h("button", { class: "fab", id: "fab", "aria-label": "Add expense", title: "Add expense", hidden: !!ui.sheetOpen, onclick: openSheet }, h("span", { "aria-hidden": "true", text: "+" })));
 
   /* expenses */
-  const hasOwn = cur.expenses.some(e => e.by === mine);
+  const hasOwn = cur.expenses.some(e => e.by === mine && e.kind !== "payment");
   out.push(h("div", { class: "panel" },
     h("div", { class: "top" }, h("h2", { text: "Expenses" }),
       cur.expenses.length ? h("span", { class: "hint", text: hasOwn ? "Swipe ← to delete · → to edit yours" : "Swipe ← to delete" }) : null),
     cur.expenses.length ? h("div", { class: "list" }, cur.expenses.flatMap((e, i) => {
-      const base = Math.round(e.amount * (e.rate || 1) * 100), own = e.by === mine;
-      const fg = h("div", { class: "li xp" + (ui.editing === e.id ? " is-editing" : ""), tabindex: 0,
+      const base = Math.round(e.amount * (e.rate || 1) * 100), isPay = e.kind === "payment", own = e.by === mine && !isPay;
+      const fg = h("div", { class: "li xp" + (isPay ? " payment" : "") + (ui.editing === e.id ? " is-editing" : ""), tabindex: 0,
           "aria-label": `${e.desc}, ${fmt(e.amount, e.currency)}. ${own ? "Press E to edit, " : ""}Delete key to delete.`,
           onkeydown: ev => { if (own && ev.key.toLowerCase() === "e") startEdit(e); else if (ev.key === "Delete") deleteExpense(t, e); } },
-        h("span", { class: "xi", "aria-hidden": "true", text: iconFor(t, e) }),
-        h("b", { text: e.desc }),
+        h("span", { class: "xi", "aria-hidden": "true", text: isPay ? "💸" : iconFor(t, e) }),
+        h("b", { text: isPay ? `${memberName(t, e.paidBy)} → ${memberName(t, e.split[0])}` : e.desc }),
         h("span", { class: "act" }, h("span", { class: "num", text: fmt(e.amount, e.currency) })),
-        h("span", { class: "sub", text: `${memberName(t, e.paidBy)} paid · split ${e.split.length} ways${e.currency !== ccy ? ` · ${money(base, ccy)} at ${e.rate}` : ""}` }));
+        h("span", { class: "sub", text: isPay ? "Payment from settle up" : `${memberName(t, e.paidBy)} paid · split ${e.split.length} ways${e.currency !== ccy ? ` · ${money(base, ccy)} at ${e.rate}` : ""}` }));
       // A just-added expense folds into the list. Live updates can redraw the list mid-animation,
       // so resume it where it was with a negative delay instead of restarting.
       const ja = ui.justAdded, age = ja && ja.id === e.id ? Date.now() - ja.t0 : Infinity;
@@ -596,7 +621,7 @@ function tripView() {
       attachSwipe(row, fg, { left: () => deleteExpense(t, e), right: own ? () => startEdit(e) : null });
       const key = dayKey(e);
       if (i > 0 && dayKey(cur.expenses[i - 1]) === key) return [row];
-      const dayTotal = cur.expenses.filter(x => dayKey(x) === key).reduce((sum, x) => sum + Math.round(x.amount * (x.rate || 1) * 100), 0);
+      const dayTotal = cur.expenses.filter(x => dayKey(x) === key && x.kind !== "payment").reduce((sum, x) => sum + Math.round(x.amount * (x.rate || 1) * 100), 0);
       return [h("div", { class: "day" }, h("span", { text: dayLabel(key) }), h("span", { class: "num", text: money(dayTotal, ccy) })), row];
     })) : h("div", { class: "empty", text: "No expenses yet. Add the first one above, like the hotel or a dinner." })));
 

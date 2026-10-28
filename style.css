@@ -208,3 +208,6 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
 }
 @keyframes fade-in{from{background:rgba(0,0,0,0)}}
 @keyframes sheet-up{from{transform:translateY(40%);opacity:.4}}
+.muted.small{font-size:13px}
+.li.payment b{font-weight:600}
+.li.payment .num{color:var(--muted)}

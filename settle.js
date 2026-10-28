@@ -8,9 +8,10 @@ export function balances(members, expenses) {
     const base = Math.round(e.amount * (e.rate || 1) * 100);
     const split = (e.split || []).filter(id => id in bal);
     if (!split.length || !(e.paidBy in bal)) continue;
-    bal[e.paidBy] += base; paid[e.paidBy] += base;
+    const isPay = e.kind === "payment"; // repayments move balances but aren't spending
+    bal[e.paidBy] += base; if (!isPay) paid[e.paidBy] += base;
     const each = Math.floor(base / split.length); let rem = base - each * split.length;
-    for (const id of split) { const s = each + (rem > 0 ? 1 : 0); if (rem > 0) rem--; bal[id] -= s; share[id] += s; }
+    for (const id of split) { const s = each + (rem > 0 ? 1 : 0); if (rem > 0) rem--; bal[id] -= s; if (!isPay) share[id] += s; }
   }
   return { bal, paid, share };
 }
