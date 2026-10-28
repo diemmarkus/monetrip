@@ -415,17 +415,14 @@ function tripView() {
   /* add expense */
   const xerr = h("p", { class: "err", hidden: true });
   const rateNote = h("span", { class: "fx-conv" });
-  const manualNote = h("p", { class: "fx-info", hidden: true, text: "No automatic rate right now. Enter the rate your bank used." });
   const rateBox = h("div", { class: "fx", hidden: true },
     h("div", { class: "fx-row" },
       h("label", { class: "fx-line", for: "xrate" }, h("span", { id: "fxfrom" }), h("input", { id: "xrate", name: "xrate", inputmode: "decimal", placeholder: "0,00", "aria-label": "Exchange rate" }), h("span", { text: ccy })),
-      rateNote),
-    manualNote);
+      rateNote));
   const preview = f => {
     const c = f.xccy.value; if (c === ccy) return;
     const amt = parseNum(f.xamt.value), r = parseNum(f.xrate.value);
     rateNote.textContent = amt > 0 && r > 0 ? "≈ " + money(Math.round(amt * r * 100), ccy) : "";
-    manualNote.hidden = !!autoRate(c, ccy);
   };
   const syncRate = f => {
     const c = f.xccy.value; rateBox.hidden = c === ccy; f.xrate.required = c !== ccy;
