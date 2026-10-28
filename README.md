@@ -1,6 +1,6 @@
 # MoneTrip
 
-*Strenge Rechnung, gute Freunde.*
+*Freunde & Moneten*
 
 Split trip expenses with friends. Create a trip, invite people with a link, log expenses in any currency (default EUR, with ECB exchange rates filled in automatically), and press **Settle up** to get the payback plan with the fewest possible transfers.
 

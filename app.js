@@ -201,7 +201,7 @@ function brand() {
     me ? h("span", { class: "who" }, me.photoURL ? h("img", { src: me.photoURL, alt: "" }) : null,
       h("span", { text: guest ? (firstName() || "Guest") + " · guest" : (me.displayName || me.email || "") }),
       guest ? h("button", { class: "ghost", style: "color:var(--accent-text)", onclick: saveWithGoogle }, "Save with Google") : null, out) : null),
-    h("span", { class: "tag", text: "Strenge Rechnung, gute Freunde." }));
+    h("span", { class: "tag", text: "Freunde & Moneten" }));
 }
 function render() {
   const ae = document.activeElement?.id, saved = {};
