@@ -2,23 +2,23 @@
 /* Layout: a single narrow column — trips list, then a trip "ticket" with balances, payback plan and expense ledger. */
 :root{
   --bg:#f2f4f3; --surface:#ffffff; --ink:#15231f; --muted:#5d6b67; --line:#d9e0dd;
-  --accent:#1cd6c7; --accent-ink:#04312d; --accent-soft:#d6f7f4; --accent-text:#08776f;
-  --bar-pos:#1cd6c7; --bar-neg:#ed9726; --danger:#b23a2e;
-  --owe:#b0620a; --get:#08776f; --warn:#9a6a00; --warn-soft:#fbf1d8;
+  --accent:#34e5eb; --accent-ink:#03363a; --accent-soft:#d9f8fa; --accent-text:#07767c;
+  --bar-pos:#34e5eb; --bar-neg:#ed9726; --danger:#b23a2e;
+  --owe:#b0620a; --get:#07767c; --warn:#9a6a00; --warn-soft:#fbf1d8;
   --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
   --body:"Figtree",ui-sans-serif,system-ui,sans-serif;
   --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#0f1715; --surface:#17221f; --ink:#e6eeeb; --muted:#93a39e; --line:#2a3834;
-  --accent:#1cd6c7; --accent-ink:#04312d; --accent-soft:#123a37; --accent-text:#1cd6c7;
-  --bar-pos:#1cd6c7; --bar-neg:#ed9726; --danger:#f08a7e;
-  --owe:#ed9726; --get:#1cd6c7; --warn:#e7bb57; --warn-soft:#352c14; color-scheme:dark}}
+  --accent:#34e5eb; --accent-ink:#03363a; --accent-soft:#0f3a3d; --accent-text:#34e5eb;
+  --bar-pos:#34e5eb; --bar-neg:#ed9726; --danger:#f08a7e;
+  --owe:#ed9726; --get:#34e5eb; --warn:#e7bb57; --warn-soft:#352c14; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0f1715; --surface:#17221f; --ink:#e6eeeb; --muted:#93a39e; --line:#2a3834;
-  --accent:#1cd6c7; --accent-ink:#04312d; --accent-soft:#123a37; --accent-text:#1cd6c7;
-  --bar-pos:#1cd6c7; --bar-neg:#ed9726; --danger:#f08a7e;
-  --owe:#ed9726; --get:#1cd6c7; --warn:#e7bb57; --warn-soft:#352c14; color-scheme:dark}
+  --accent:#34e5eb; --accent-ink:#03363a; --accent-soft:#0f3a3d; --accent-text:#34e5eb;
+  --bar-pos:#34e5eb; --bar-neg:#ed9726; --danger:#f08a7e;
+  --owe:#ed9726; --get:#34e5eb; --warn:#e7bb57; --warn-soft:#352c14; color-scheme:dark}
 body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--body)}
 .wrap{max-width:720px;margin:0 auto;padding-block:24px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:20px}
 h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;line-height:1.15}
