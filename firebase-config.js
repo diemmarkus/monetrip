@@ -1,10 +1,10 @@
-// Paste your Firebase web app config here (Firebase console → Project settings → Your apps → Web app).
-// These values are public by design; access is protected by firestore.rules.
+// Firebase web app config for MoneTrip. These values are public by design;
+// access to data is protected by firestore.rules.
 export const firebaseConfig = {
-  apiKey: "REPLACE_ME",
-  authDomain: "REPLACE_ME.firebaseapp.com",
-  projectId: "REPLACE_ME",
-  storageBucket: "REPLACE_ME.appspot.com",
-  messagingSenderId: "REPLACE_ME",
-  appId: "REPLACE_ME"
+  apiKey: "AIzaSyBKPssWV0DDsPzOjPBhcKVn4jdx9rhC1F0",
+  authDomain: "monetrip-2aa9b.firebaseapp.com",
+  projectId: "monetrip-2aa9b",
+  storageBucket: "monetrip-2aa9b.firebasestorage.app",
+  messagingSenderId: "846191116948",
+  appId: "1:846191116948:web:4e25ed512cd68f431f6a81"
 };
