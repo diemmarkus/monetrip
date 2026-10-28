@@ -112,6 +112,22 @@ async function addMember(name, withMe) {
   if (withMe) { ui.joinPick = false; render(); }
 }
 
+/* ---------- expense form helpers ---------- */
+function resetExpenseForm() {
+  const f = app.querySelector(".xform"); if (!f) return;
+  f.reset(); f.xrate.value = ""; f._resync?.();
+}
+function startEdit(e) {
+  ui.editing = e.id; render();
+  const f = app.querySelector(".xform"); if (!f) return;
+  f.xdesc.value = e.desc; f.xamt.value = String(e.amount).replace(".", ",");
+  f.xccy.value = e.currency; f.xrate.value = String(e.rate || 1).replace(".", ",");
+  f.xpaid.value = e.paidBy;
+  for (const cb of f.querySelectorAll("input[name=xsplit]")) cb.checked = (e.split || []).includes(cb.value);
+  f._resync?.();
+  f.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+}
+
 /* ---------- views ---------- */
 const firstName = () => guestName || (me?.displayName || "").split(" ")[0];
 function googleSignIn() {
@@ -215,7 +231,11 @@ function homeView() {
         h("span", { class: "code", text: t.code }));
     }))
     : h("div", { class: "empty", text: "No trips yet. Create one below, or join a friend's trip with their code." });
-  return [brand(), h("h1", { text: "Your trips" }), list, createForm, joinForm];
+  const guestNote = h("div", { class: "panel" },
+    h("h2", { text: "Start your own trip" }),
+    h("p", { class: "muted", text: "You're using MoneTrip as a guest, so you can join trips but not create them. Save your account with Google to start your own." }),
+    h("button", { class: "primary", style: "align-self:flex-start", onclick: saveWithGoogle }, "Save with Google"));
+  return [brand(), h("h1", { text: "Your trips" }), list, me.isAnonymous ? guestNote : createForm, joinForm];
 }
 
 function tripView() {
@@ -271,7 +291,7 @@ function tripView() {
   /* settlement */
   const s = t.settlement;
   if (s) {
-    const stale = cur.expenses.some(e => (e.at || 0) > s.at) || s.count !== cur.expenses.length;
+    const stale = cur.expenses.some(e => (e.changed || e.at || 0) > s.at) || s.count !== cur.expenses.length;
     const minePay = s.transfers.filter(x => x.from === mine || x.to === mine), others = s.transfers.filter(x => !(x.from === mine || x.to === mine));
     const row = x => {
       const k = x.from + "_" + x.to, done = !!(t.paid || {})[k], isMine = x.from === mine || x.to === mine;
@@ -337,6 +357,8 @@ function tripView() {
     f.xrate.value = a ? String(a).replace(".", ",") : "";
     preview(f);
   };
+  const editing = ui.editing ? cur.expenses.find(x => x.id === ui.editing) : null;
+  if (ui.editing && !editing && cur.expenses.length) ui.editing = null;
   const form = h("form", { class: "panel xform", oninput: e => { if (e.target.id === "xrate") e.currentTarget.dataset.auto = ""; preview(e.currentTarget); }, onsubmit: async e => {
       e.preventDefault(); const f = e.target; xerr.hidden = true;
       const amount = parseNum(f.xamt.value), c = f.xccy.value, rate = c === ccy ? 1 : parseNum(f.xrate.value);
@@ -344,15 +366,15 @@ function tripView() {
       const bad = !f.xdesc.value.trim() ? "Add a short description." : !(amount > 0) ? "Enter an amount above zero." : !(rate > 0) ? `Enter how many ${ccy} one ${c} is worth.` : !split.length ? "Pick at least one person to split with." : null;
       if (bad) { xerr.hidden = false; xerr.textContent = bad; return; }
       const btn = f.querySelector("button[type=submit]"); btn.disabled = true;
-      try { await setDoc(doc(db, "trips", t.id, "expenses", rid()), { desc: f.xdesc.value.trim(), amount, currency: c, rate, paidBy: f.xpaid.value, split, at: Date.now(), by: mine });
-        // The live update may already have redrawn the form, so reset whichever form is on screen now.
-        const nf = app.querySelector(".xform") || f;
-        nf.reset(); nf.xrate.value = ""; nf._resync?.(); xerr.hidden = true;
-        toast("Expense added"); }
+      const data = { desc: f.xdesc.value.trim(), amount, currency: c, rate, paidBy: f.xpaid.value, split };
+      try {
+        if (editing) { await updateDoc(doc(db, "trips", t.id, "expenses", editing.id), { ...data, changed: Date.now() }); ui.editing = null; render(); resetExpenseForm(); toast("Expense updated"); }
+        else { await setDoc(doc(db, "trips", t.id, "expenses", rid()), { ...data, at: Date.now(), by: mine }); resetExpenseForm(); toast("Expense added"); }
+      }
       catch { xerr.hidden = false; xerr.textContent = "Couldn't save the expense. Try again."; }
       btn.disabled = false;
     } },
-    h("h2", { text: "Add an expense" }),
+    h("h2", { text: editing ? "Edit expense" : "Add an expense" }),
     h("label", {}, "What for", h("input", { id: "xdesc", name: "xdesc", placeholder: "Dinner, taxi, hotel…", maxlength: 80, autocomplete: "off" })),
     h("label", {}, "Amount",
       h("span", { class: "money" },
@@ -363,7 +385,12 @@ function tripView() {
     h("div", {}, h("h3", { text: "Split equally between", style: "margin-bottom:8px" }),
       h("div", { class: "checks" }, ids.map(id => h("label", {}, h("input", { type: "checkbox", name: "xsplit", value: id, checked: true, id: "xs-" + id }), memberName(t, id))))),
     xerr,
-    h("button", { class: "primary", type: "submit" }, "Add expense"));
+    editing
+      ? h("div", { class: "pair" },
+          h("button", { type: "button", onclick: () => { ui.editing = null; render(); resetExpenseForm(); } }, "Cancel"),
+          h("button", { class: "primary", type: "submit" }, "Save changes"))
+      : h("button", { class: "primary", type: "submit" }, "Add expense"));
+  if (editing) form.classList.add("editing");
   form._resync = () => {
     const c = form.xccy.value; rateBox.hidden = c === ccy; form.xrate.required = c !== ccy;
     $("#fxfrom", rateBox).textContent = "1 " + c + " =";
@@ -378,8 +405,9 @@ function tripView() {
   out.push(h("div", { class: "panel" }, h("h2", { text: "Expenses" }),
     cur.expenses.length ? h("div", { class: "list" }, cur.expenses.map(e => {
       const base = Math.round(e.amount * (e.rate || 1) * 100);
-      return h("div", { class: "li" }, h("b", { text: e.desc }),
+      return h("div", { class: "li" + (ui.editing === e.id ? " is-editing" : "") }, h("b", { text: e.desc }),
         h("span", { class: "act" }, h("span", { class: "num", text: fmt(e.amount, e.currency) }),
+          e.by === mine ? h("button", { class: "icon-btn edit-btn", title: "Edit", "aria-label": "Edit " + e.desc, onclick: () => startEdit(e) }) : null,
           h("button", { class: "ghost", "aria-label": "Delete " + e.desc, title: "Delete", onclick: async ev => {
             const b = ev.currentTarget;
             if (b.dataset.sure) { await deleteDoc(doc(db, "trips", t.id, "expenses", e.id)); toast("Expense deleted"); }
@@ -387,6 +415,7 @@ function tripView() {
           } }, "✕")),
         h("span", { class: "sub", text: `${memberName(t, e.paidBy)} paid · split ${e.split.length} ways${e.currency !== ccy ? ` · ${money(base, ccy)} at ${e.rate}` : ""} · ${new Date(e.at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}` }));
     })) : h("div", { class: "empty", text: "No expenses yet. Add the first one above, like the hotel or a dinner." })));
+  for (const b of out[out.length - 1].querySelectorAll(".edit-btn")) b.innerHTML = pencil;
 
   /* people & invite */
   const gform = h("form", { class: "row", onsubmit: async e => { e.preventDefault(); const n = e.target.gname.value.trim(); if (!n) return; await addMember(n, false); e.target.reset(); toast(n + " added"); } },
@@ -395,13 +424,16 @@ function tripView() {
   out.push(h("div", { class: "panel" }, h("h2", { text: "People" }),
     h("div", { class: "chips" }, ids.map(id => h("span", { class: "chip" + (id === mine ? " you" : "") }, memberName(t, id), !t.members[id].uid ? h("small", { text: "not joined" }) : null))),
     h("div", {}, h("h3", { text: "Invite", style: "margin-bottom:6px" }),
-      h("p", {}, "Send friends this link. They sign in with Google and pick their name. Code: ", h("b", { class: "num", text: t.code })),
-      h("div", { class: "row", style: "margin-top:10px" },
-        h("button", { class: "primary", onclick: async () => {
-          const text = `Join "${t.name}" on MoneTrip – strenge Rechnung, gute Freunde.`;
-          if (navigator.share) { try { await navigator.share({ title: "MoneTrip", text, url: link }); return; } catch (e) { if (e.name === "AbortError") return; } }
-          try { await navigator.clipboard.writeText(text + " " + link); toast("Invite link copied"); } catch { toast(link); }
-        } }, "Share invite link"))),
+      h("p", { class: "muted", text: "Send friends this link. They only need to type their first name." }),
+      h("div", { class: "linkbox" },
+        h("input", { id: "invlink", readonly: true, value: link, "aria-label": "Invite link", onfocus: e => e.target.select() }),
+        h("button", { type: "button", onclick: async () => {
+          try { await navigator.clipboard.writeText(link); toast("Link copied"); }
+          catch { const i = document.getElementById("invlink"); i.focus(); i.select(); toast("Tap and hold to copy"); }
+        } }, "Copy")),
+      navigator.share ? h("button", { class: "primary", style: "margin-top:10px", onclick: async () => {
+          try { await navigator.share({ url: link }); } catch {}
+        } }, "Share…") : null),
     gform, h("button", { class: "ghost", style: "align-self:flex-start", onclick: () => { ui.joinPick = true; render(); } }, "Not you? Switch person")));
 
   if (t.createdBy === me.uid) {

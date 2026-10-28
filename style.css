@@ -116,3 +116,10 @@ details summary{cursor:pointer;font-weight:600;color:var(--accent)}
 .close-btn{color:var(--muted);font-size:16px;opacity:1}
 .close-btn:hover{background:var(--accent-soft)}
 .close-btn.confirm{width:auto;padding:0 10px;color:var(--owe);font-size:14px;font-weight:600}
+.linkbox{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--bg);margin-top:4px}
+.linkbox input{border:none;border-radius:0;flex:1 1 auto;min-width:0;font-family:var(--mono);font-size:13px;color:var(--muted);background:transparent}
+.linkbox button{border:none;border-left:1px solid var(--line);border-radius:0;flex:0 0 auto}
+.xform.editing{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.li.is-editing b{color:var(--accent)}
+.edit-btn{color:var(--muted);min-height:32px;width:32px}
+.edit-btn:hover{background:var(--accent-soft);color:var(--accent)}
