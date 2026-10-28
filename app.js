@@ -1,10 +1,11 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut, signInAnonymously, updateProfile, linkWithPopup }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion }
+import { getFirestore, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, deleteField, FieldPath }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 import { settle, balances } from "./settle.js";
+import { autoIcon, PICKS } from "./icons.js";
 
 const CURRENCIES = ["EUR","USD","GBP","CHF","CZK","HUF","PLN","TRY","SEK","NOK","DKK","JPY","CAD","AUD","THB"];
 const $ = (s, r = document) => r.querySelector(s);
@@ -170,17 +171,32 @@ function attachSwipe(row, fg, { left, right }) {
   fg.addEventListener("pointercancel", e => { if (e.pointerId === pid) { pid = null; lock = null; fg.classList.remove("dragging"); row.classList.remove("armed"); reset(); } });
 }
 
+/* ---------- expense icons ---------- */
+// An icon picked by hand is remembered for that description: on the trip (shared with
+// everyone on it) and on this device (so it carries over to your next trip).
+const iconKey = d => String(d || "").trim().toLowerCase().replace(/\s+/g, " ");
+const LOCAL_ICONS = "monetrip.icons";
+function localIcons() { try { return JSON.parse(localStorage.getItem(LOCAL_ICONS)) || {}; } catch { return {}; } }
+function rememberIcon(t, desc, icon) {
+  const k = iconKey(desc); if (!k) return;
+  try { const m = localIcons(); if (icon) m[k] = icon; else delete m[k]; localStorage.setItem(LOCAL_ICONS, JSON.stringify(m)); } catch {}
+  if ((t.iconMemory || {})[k] !== (icon || undefined))
+    updateDoc(doc(db, "trips", t.id), new FieldPath("iconMemory", k), icon || deleteField()).catch(() => {});
+}
+const suggestIcon = (t, desc) => { const k = iconKey(desc); return (t?.iconMemory || {})[k] || localIcons()[k] || autoIcon(desc); };
+const iconFor = (t, e) => e.icon || suggestIcon(t, e.desc);
+
 /* ---------- expense form helpers ---------- */
 function resetExpenseForm() {
   const f = app.querySelector(".xform"); if (!f) return;
-  f.reset(); f.xrate.value = ""; f._resync?.();
+  f.reset(); f.xrate.value = ""; f.xicon.value = ""; f._resync?.(); f._syncIcon?.();
 }
 function startEdit(e) {
   ui.editing = e.id; render();
   const f = app.querySelector(".xform"); if (!f) return;
   f.xdesc.value = e.desc; f.xamt.value = String(e.amount).replace(".", ",");
   f.xccy.value = e.currency; f.xrate.value = String(e.rate || 1).replace(".", ",");
-  f.xpaid.value = e.paidBy; f.xdate.value = dayKey(e);
+  f.xpaid.value = e.paidBy; f.xdate.value = dayKey(e); f.xicon.value = e.icon || ""; f._syncIcon?.();
   for (const cb of f.querySelectorAll("input[name=xsplit]")) cb.checked = (e.split || []).includes(cb.value);
   f._resync?.();
   f.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
@@ -220,6 +236,7 @@ function render() {
   app.replaceChildren(...(!me ? signInView() : cur.id ? tripView() : homeView()));
   for (const [id, v] of Object.entries(saved)) { const el = document.getElementById(id); if (!el) continue; if (el.type === "checkbox") el.checked = v; else el.value = v; }
   app.querySelector(".xform")?._resync?.();
+  app.querySelector(".xform")?._syncIcon?.();
   if (ae) document.getElementById(ae)?.focus();
 }
 function signInView() {
@@ -418,14 +435,21 @@ function tripView() {
   };
   const editing = ui.editing ? cur.expenses.find(x => x.id === ui.editing) : null;
   if (ui.editing && !editing && cur.expenses.length) ui.editing = null;
-  const form = h("form", { class: "panel xform", oninput: e => { if (e.target.id === "xrate") e.currentTarget.dataset.auto = ""; preview(e.currentTarget); }, onsubmit: async e => {
+  const iconBtn = h("button", { type: "button", class: "icon-pick", "aria-label": "Choose an icon", "aria-expanded": "false",
+    onclick: () => { picks.hidden = !picks.hidden; iconBtn.setAttribute("aria-expanded", String(!picks.hidden)); } });
+  const pick = ic => { form.xicon.value = ic; picks.hidden = true; iconBtn.setAttribute("aria-expanded", "false"); form._syncIcon(); };
+  const picks = h("div", { class: "picks", hidden: true, role: "group", "aria-label": "Icons" },
+    PICKS.map(ic => h("button", { type: "button", onclick: () => pick(ic) }, ic)),
+    h("button", { type: "button", class: "auto", onclick: () => pick("") }, "Auto"));
+  const form = h("form", { class: "panel xform", oninput: e => { if (e.target.id === "xrate") e.currentTarget.dataset.auto = ""; if (e.target.id === "xdesc") form._syncIcon(); preview(e.currentTarget); }, onsubmit: async e => {
       e.preventDefault(); const f = e.target; xerr.hidden = true;
       const amount = parseNum(f.xamt.value), c = f.xccy.value, rate = c === ccy ? 1 : parseNum(f.xrate.value);
       const split = [...f.querySelectorAll("input[name=xsplit]:checked")].map(i => i.value);
       const bad = !f.xdesc.value.trim() ? "Add a short description." : !(amount > 0) ? "Enter an amount above zero." : !(rate > 0) ? `Enter how many ${ccy} one ${c} is worth.` : !split.length ? "Pick at least one person to split with." : null;
       if (bad) { xerr.hidden = false; xerr.textContent = bad; return; }
       const btn = f.querySelector("button[type=submit]"); btn.disabled = true;
-      const data = { desc: f.xdesc.value.trim(), amount, currency: c, rate, paidBy: f.xpaid.value, split, date: f.xdate.value || isoDay(Date.now()) };
+      const data = { desc: f.xdesc.value.trim(), icon: f.xicon.value, amount, currency: c, rate, paidBy: f.xpaid.value, split, date: f.xdate.value || isoDay(Date.now()) };
+      if (data.icon !== (editing?.icon || "")) rememberIcon(t, data.desc, data.icon);
       try {
         if (editing) { await updateDoc(doc(db, "trips", t.id, "expenses", editing.id), { ...data, changed: Date.now() }); ui.editing = null; render(); resetExpenseForm(); toast("Expense updated"); }
         else { await setDoc(doc(db, "trips", t.id, "expenses", rid()), { ...data, at: Date.now(), by: mine }); resetExpenseForm(); toast("Expense added"); }
@@ -434,7 +458,10 @@ function tripView() {
       btn.disabled = false;
     } },
     h("h2", { text: editing ? "Edit expense" : "Add an expense" }),
-    h("label", {}, "What for", h("input", { id: "xdesc", name: "xdesc", placeholder: "Dinner, taxi, hotel…", maxlength: 80, autocomplete: "off" })),
+    h("div", { class: "field" }, h("label", { for: "xdesc", text: "What for" }),
+      h("div", { class: "desc-row" }, iconBtn, h("input", { id: "xdesc", name: "xdesc", placeholder: "Dinner, taxi, hotel…", maxlength: 80, autocomplete: "off" }),
+        h("input", { type: "hidden", id: "xicon", name: "xicon", value: "" })),
+      picks),
     h("label", {}, "Amount",
       h("span", { class: "money" },
         h("input", { id: "xamt", name: "xamt", inputmode: "decimal", placeholder: "0,00", autocomplete: "off" }),
@@ -452,6 +479,13 @@ function tripView() {
           h("button", { class: "primary", type: "submit" }, "Save changes"))
       : h("button", { class: "primary", type: "submit" }, "Add expense"));
   if (editing) form.classList.add("editing");
+  form._syncIcon = () => {
+    const own = form.xicon.value;
+    iconBtn.textContent = own || suggestIcon(t, form.xdesc.value);
+    iconBtn.classList.toggle("set", !!own);
+    for (const b of picks.children) b.setAttribute("aria-pressed", String(b.classList.contains("auto") ? !own : b.textContent === own));
+  };
+  form._syncIcon();
   form._resync = () => {
     const c = form.xccy.value; rateBox.hidden = c === ccy; form.xrate.required = c !== ccy;
     $("#fxfrom", rateBox).textContent = "1 " + c + " =";
@@ -469,9 +503,10 @@ function tripView() {
       cur.expenses.length ? h("span", { class: "hint", text: hasOwn ? "Swipe ← to delete · → to edit yours" : "Swipe ← to delete" }) : null),
     cur.expenses.length ? h("div", { class: "list" }, cur.expenses.flatMap((e, i) => {
       const base = Math.round(e.amount * (e.rate || 1) * 100), own = e.by === mine;
-      const fg = h("div", { class: "li" + (ui.editing === e.id ? " is-editing" : ""), tabindex: 0,
+      const fg = h("div", { class: "li xp" + (ui.editing === e.id ? " is-editing" : ""), tabindex: 0,
           "aria-label": `${e.desc}, ${fmt(e.amount, e.currency)}. ${own ? "Press E to edit, " : ""}Delete key to delete.`,
           onkeydown: ev => { if (own && ev.key.toLowerCase() === "e") startEdit(e); else if (ev.key === "Delete") deleteExpense(t, e); } },
+        h("span", { class: "xi", "aria-hidden": "true", text: iconFor(t, e) }),
         h("b", { text: e.desc }),
         h("span", { class: "act" }, h("span", { class: "num", text: fmt(e.amount, e.currency) })),
         h("span", { class: "sub", text: `${memberName(t, e.paidBy)} paid · split ${e.split.length} ways${e.currency !== ccy ? ` · ${money(base, ccy)} at ${e.rate}` : ""}` }));
