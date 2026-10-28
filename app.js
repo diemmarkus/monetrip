@@ -197,11 +197,12 @@ function brand() {
     closeTrip(); signOut(auth);
   } }, "Sign out");
   return h("div", { class: "brand" }, h("div", { class: "top" },
-    h("span", { class: "name" }, h("span", { class: "logo", "aria-hidden": "true" }), "MoneTrip"),
+    h("div", { class: "id" }, h("span", { class: "logo", "aria-hidden": "true" }),
+      h("div", { class: "words" }, h("span", { class: "name", text: "MoneTrip" }),
+        h("span", { class: "tag", text: "Freunde & Moneten" }))),
     me ? h("span", { class: "who" }, me.photoURL ? h("img", { src: me.photoURL, alt: "" }) : null,
       h("span", { text: guest ? (firstName() || "Guest") + " · guest" : (me.displayName || me.email || "") }),
-      guest ? h("button", { class: "ghost", style: "color:var(--accent-text)", onclick: saveWithGoogle }, "Save with Google") : null, out) : null),
-    h("span", { class: "tag", text: "Freunde & Moneten" }));
+      guest ? h("button", { class: "ghost", style: "color:var(--accent-text)", onclick: saveWithGoogle }, "Save with Google") : null, out) : null));
 }
 function render() {
   const ae = document.activeElement?.id, saved = {};
