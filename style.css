@@ -2,7 +2,7 @@
 /* Layout: a single narrow column — trips list, then a trip "ticket" with balances, payback plan and expense ledger. */
 :root{
   --bg:#f7f3f5; --surface:#ffffff; --ink:#23161c; --muted:#6c5e65; --line:#e7dbe1;
-  --accent:#c2185b; --accent-ink:#ffffff; --accent-soft:#fbe4ee;
+  --accent:#e0067a; --accent-ink:#ffffff; --accent-soft:#ffe1f0;
   --owe:#b4471f; --get:#1a7a4c; --warn:#9a6a00; --warn-soft:#fbf1d8;
   --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
   --body:"Figtree",ui-sans-serif,system-ui,sans-serif;
@@ -10,11 +10,11 @@
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#161114; --surface:#211a1e; --ink:#f2e9ed; --muted:#a8979f; --line:#3a2d34;
-  --accent:#f48fb8; --accent-ink:#3d0a20; --accent-soft:#3d1f2d;
+  --accent:#ff4fa7; --accent-ink:#3a0020; --accent-soft:#4a1532;
   --owe:#f2a06e; --get:#6fd39f; --warn:#e7bb57; --warn-soft:#352c14; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#161114; --surface:#211a1e; --ink:#f2e9ed; --muted:#a8979f; --line:#3a2d34;
-  --accent:#f48fb8; --accent-ink:#3d0a20; --accent-soft:#3d1f2d;
+  --accent:#ff4fa7; --accent-ink:#3a0020; --accent-soft:#4a1532;
   --owe:#f2a06e; --get:#6fd39f; --warn:#e7bb57; --warn-soft:#352c14; color-scheme:dark}
 body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--body)}
 .wrap{max-width:720px;margin:0 auto;padding-block:24px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:20px}
