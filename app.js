@@ -150,8 +150,8 @@ function attachSwipe(row, fg, { left, right }) {
     if (lock === "x") {
       const th = Math.min(110, row.offsetWidth * 0.33);
       row.classList.remove("armed");
-      if (dx <= -th && left) { reset(); left(); }
-      else if (dx >= th && right) { fg.style.transform = `translateX(${row.offsetWidth}px)`; row.classList.add("leaving"); setTimeout(right, 160); }
+      if (dx <= -th && left) { fg.style.transform = `translateX(${-row.offsetWidth}px)`; row.classList.add("leaving"); setTimeout(left, 160); }
+      else if (dx >= th && right) { reset(); right(); }
       else reset();
     }
     lock = null;
@@ -453,7 +453,7 @@ function tripView() {
   const hasOwn = cur.expenses.some(e => e.by === mine);
   out.push(h("div", { class: "panel" },
     h("div", { class: "top" }, h("h2", { text: "Expenses" }),
-      cur.expenses.length ? h("span", { class: "hint", text: hasOwn ? "Swipe ← to edit yours · → to delete" : "Swipe → to delete" }) : null),
+      cur.expenses.length ? h("span", { class: "hint", text: hasOwn ? "Swipe ← to delete · → to edit yours" : "Swipe ← to delete" }) : null),
     cur.expenses.length ? h("div", { class: "list" }, cur.expenses.map(e => {
       const base = Math.round(e.amount * (e.rate || 1) * 100), own = e.by === mine;
       const fg = h("div", { class: "li" + (ui.editing === e.id ? " is-editing" : ""), tabindex: 0,
@@ -466,7 +466,7 @@ function tripView() {
         h("div", { class: "sw-bg sw-del", "aria-hidden": "true" }, "Delete"),
         h("div", { class: "sw-bg sw-edit", "aria-hidden": "true" }, "Edit"),
         fg);
-      attachSwipe(row, fg, { left: own ? () => startEdit(e) : null, right: () => deleteExpense(t, e) });
+      attachSwipe(row, fg, { left: () => deleteExpense(t, e), right: own ? () => startEdit(e) : null });
       return row;
     })) : h("div", { class: "empty", text: "No expenses yet. Add the first one above, like the hotel or a dinner." })));
 

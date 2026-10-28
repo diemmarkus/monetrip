@@ -132,10 +132,10 @@ details summary{cursor:pointer;font-weight:600;color:var(--accent-text)}
 .swipe .li.dragging{cursor:grabbing}
 .swipe .li:focus-visible{outline:2px solid var(--accent-text);outline-offset:-2px}
 .sw-bg{position:absolute;inset:0;display:flex;align-items:center;padding:0 18px;font-weight:600;opacity:0}
-.sw-del{background:var(--danger);color:var(--surface);justify-content:flex-start}
-.sw-edit{background:var(--accent);color:var(--accent-ink);justify-content:flex-end}
-.swipe[data-dir="right"] .sw-del,.swipe[data-dir="left"] .sw-edit{opacity:.55}
-.swipe.armed[data-dir="right"] .sw-del,.swipe.armed[data-dir="left"] .sw-edit,.swipe.leaving .sw-del{opacity:1}
+.sw-del{background:var(--danger);color:var(--surface);justify-content:flex-end}
+.sw-edit{background:var(--accent);color:var(--accent-ink);justify-content:flex-start}
+.swipe[data-dir="left"] .sw-del,.swipe[data-dir="right"] .sw-edit{opacity:.55}
+.swipe.armed[data-dir="left"] .sw-del,.swipe.armed[data-dir="right"] .sw-edit,.swipe.leaving .sw-del{opacity:1}
 .toast{display:flex;align-items:center;gap:14px}
 .toast-act{background:none;border:none;color:inherit;font-weight:700;text-decoration:underline;text-underline-offset:3px;padding:4px 6px;min-height:0}
 @media (prefers-reduced-motion:no-preference){.swipe .li{transition:transform .2s ease}.swipe .li.dragging{transition:none}.sw-bg{transition:opacity .15s}}
