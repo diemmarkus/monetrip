@@ -126,3 +126,16 @@ details summary{cursor:pointer;font-weight:600;color:var(--accent-text)}
 .li.is-editing b{color:var(--accent-text)}
 .edit-btn{color:var(--muted);min-height:32px;width:32px}
 .edit-btn:hover{background:var(--accent-soft);color:var(--accent-text)}
+.swipe{position:relative;overflow:hidden;border-top:1px solid var(--line)}
+.swipe:first-child{border-top:none}
+.swipe .li{border-top:none;padding:11px 2px;background:var(--surface);position:relative;z-index:1;touch-action:pan-y;user-select:none;-webkit-user-select:none;cursor:grab}
+.swipe .li.dragging{cursor:grabbing}
+.swipe .li:focus-visible{outline:2px solid var(--accent-text);outline-offset:-2px}
+.sw-bg{position:absolute;inset:0;display:flex;align-items:center;padding:0 18px;font-weight:600;opacity:0}
+.sw-del{background:var(--danger);color:var(--surface);justify-content:flex-start}
+.sw-edit{background:var(--accent);color:var(--accent-ink);justify-content:flex-end}
+.swipe[data-dir="right"] .sw-del,.swipe[data-dir="left"] .sw-edit{opacity:.55}
+.swipe.armed[data-dir="right"] .sw-del,.swipe.armed[data-dir="left"] .sw-edit,.swipe.leaving .sw-del{opacity:1}
+.toast{display:flex;align-items:center;gap:14px}
+.toast-act{background:none;border:none;color:inherit;font-weight:700;text-decoration:underline;text-underline-offset:3px;padding:4px 6px;min-height:0}
+@media (prefers-reduced-motion:no-preference){.swipe .li{transition:transform .2s ease}.swipe .li.dragging{transition:none}.sw-bg{transition:opacity .15s}}

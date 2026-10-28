@@ -34,7 +34,11 @@ function h(tag, attrs = {}, ...kids) {
   for (const k of kids.flat()) { if (k == null || k === false) continue; e.append(k instanceof Node ? k : document.createTextNode(String(k))); }
   return e;
 }
-function toast(msg) { const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => t.hidden = true, 2400); }
+function toast(msg, action) {
+  const t = $("#toast"); t.replaceChildren(document.createTextNode(msg)); t.hidden = false; clearTimeout(toast.t);
+  if (action) t.append(h("button", { class: "toast-act", onclick: () => { t.hidden = true; action.run(); } }, action.label));
+  toast.t = setTimeout(() => t.hidden = true, action ? 5000 : 2400);
+}
 function rid(n = 12) { const a = "abcdefghijkmnpqrstuvwxyz23456789"; let s = ""; for (const x of crypto.getRandomValues(new Uint8Array(n))) s += a[x % a.length]; return s; }
 function refCode() { const a = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; let s = ""; for (const x of crypto.getRandomValues(new Uint8Array(6))) s += a[x % a.length]; return s; }
 const fmt = (v, c) => { try { return new Intl.NumberFormat("de-AT", { style: "currency", currency: c }).format(v); } catch { return v + " " + c; } };
@@ -110,6 +114,50 @@ async function addMember(name, withMe) {
   const mid = rid(8);
   await updateDoc(doc(db, "trips", cur.trip.id), { [`members.${mid}`]: { name, uid: withMe ? me.uid : null } });
   if (withMe) { ui.joinPick = false; render(); }
+}
+
+/* ---------- expense list: swipe & delete ---------- */
+async function deleteExpense(t, e) {
+  const { id, ...data } = e;
+  if (ui.editing === id) { ui.editing = null; }
+  try {
+    await deleteDoc(doc(db, "trips", t.id, "expenses", id));
+    toast("Expense deleted", { label: "Undo", run: () => setDoc(doc(db, "trips", t.id, "expenses", id), data).then(() => toast("Expense restored")).catch(() => toast("Couldn't restore it.")) });
+  } catch { toast("Couldn't delete the expense. Try again."); render(); }
+}
+function attachSwipe(row, fg, { left, right }) {
+  let x0 = 0, y0 = 0, dx = 0, lock = null, pid = null;
+  const reset = () => { fg.style.transform = ""; row.dataset.dir = ""; };
+  fg.addEventListener("pointerdown", e => { if (e.button > 0) return; x0 = e.clientX; y0 = e.clientY; dx = 0; lock = null; pid = e.pointerId; });
+  fg.addEventListener("pointermove", e => {
+    if (e.pointerId !== pid) return;
+    const mx = e.clientX - x0, my = e.clientY - y0;
+    if (!lock) {
+      if (Math.abs(mx) < 8 && Math.abs(my) < 8) return;
+      lock = Math.abs(mx) > Math.abs(my) ? "x" : "y";
+      if (lock === "x") { fg.setPointerCapture(pid); fg.classList.add("dragging"); }
+    }
+    if (lock !== "x") return;
+    dx = mx;
+    if ((dx < 0 && !left) || (dx > 0 && !right)) dx = Math.sign(dx) * Math.min(24, Math.abs(dx) / 4); // resist
+    row.dataset.dir = dx < 0 ? "left" : "right";
+    const th = Math.min(110, row.offsetWidth * 0.33);
+    row.classList.toggle("armed", Math.abs(dx) >= th && (dx < 0 ? !!left : !!right));
+    fg.style.transform = `translateX(${dx}px)`;
+  });
+  const end = e => {
+    if (e.pointerId !== pid) return; pid = null; fg.classList.remove("dragging");
+    if (lock === "x") {
+      const th = Math.min(110, row.offsetWidth * 0.33);
+      row.classList.remove("armed");
+      if (dx <= -th && left) { reset(); left(); }
+      else if (dx >= th && right) { fg.style.transform = `translateX(${row.offsetWidth}px)`; row.classList.add("leaving"); setTimeout(right, 160); }
+      else reset();
+    }
+    lock = null;
+  };
+  fg.addEventListener("pointerup", end);
+  fg.addEventListener("pointercancel", e => { if (e.pointerId === pid) { pid = null; lock = null; fg.classList.remove("dragging"); row.classList.remove("armed"); reset(); } });
 }
 
 /* ---------- expense form helpers ---------- */
@@ -402,20 +450,25 @@ function tripView() {
   out.push(form);
 
   /* expenses */
-  out.push(h("div", { class: "panel" }, h("h2", { text: "Expenses" }),
+  const hasOwn = cur.expenses.some(e => e.by === mine);
+  out.push(h("div", { class: "panel" },
+    h("div", { class: "top" }, h("h2", { text: "Expenses" }),
+      cur.expenses.length ? h("span", { class: "hint", text: hasOwn ? "Swipe ← to edit yours · → to delete" : "Swipe → to delete" }) : null),
     cur.expenses.length ? h("div", { class: "list" }, cur.expenses.map(e => {
-      const base = Math.round(e.amount * (e.rate || 1) * 100);
-      return h("div", { class: "li" + (ui.editing === e.id ? " is-editing" : "") }, h("b", { text: e.desc }),
-        h("span", { class: "act" }, h("span", { class: "num", text: fmt(e.amount, e.currency) }),
-          e.by === mine ? h("button", { class: "icon-btn edit-btn", title: "Edit", "aria-label": "Edit " + e.desc, onclick: () => startEdit(e) }) : null,
-          h("button", { class: "ghost", "aria-label": "Delete " + e.desc, title: "Delete", onclick: async ev => {
-            const b = ev.currentTarget;
-            if (b.dataset.sure) { await deleteDoc(doc(db, "trips", t.id, "expenses", e.id)); toast("Expense deleted"); }
-            else { b.dataset.sure = "1"; b.textContent = "Delete?"; setTimeout(() => { if (b.isConnected) { delete b.dataset.sure; b.textContent = "✕"; } }, 3000); }
-          } }, "✕")),
+      const base = Math.round(e.amount * (e.rate || 1) * 100), own = e.by === mine;
+      const fg = h("div", { class: "li" + (ui.editing === e.id ? " is-editing" : ""), tabindex: 0,
+          "aria-label": `${e.desc}, ${fmt(e.amount, e.currency)}. ${own ? "Press E to edit, " : ""}Delete key to delete.`,
+          onkeydown: ev => { if (own && ev.key.toLowerCase() === "e") startEdit(e); else if (ev.key === "Delete") deleteExpense(t, e); } },
+        h("b", { text: e.desc }),
+        h("span", { class: "act" }, h("span", { class: "num", text: fmt(e.amount, e.currency) })),
         h("span", { class: "sub", text: `${memberName(t, e.paidBy)} paid · split ${e.split.length} ways${e.currency !== ccy ? ` · ${money(base, ccy)} at ${e.rate}` : ""} · ${new Date(e.at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}` }));
+      const row = h("div", { class: "swipe" },
+        h("div", { class: "sw-bg sw-del", "aria-hidden": "true" }, "Delete"),
+        h("div", { class: "sw-bg sw-edit", "aria-hidden": "true" }, "Edit"),
+        fg);
+      attachSwipe(row, fg, { left: own ? () => startEdit(e) : null, right: () => deleteExpense(t, e) });
+      return row;
     })) : h("div", { class: "empty", text: "No expenses yet. Add the first one above, like the hotel or a dinner." })));
-  for (const b of out[out.length - 1].querySelectorAll(".edit-btn")) b.innerHTML = pencil;
 
   /* people & invite */
   const gform = h("form", { class: "row", onsubmit: async e => { e.preventDefault(); const n = e.target.gname.value.trim(); if (!n) return; await addMember(n, false); e.target.reset(); toast(n + " added"); } },
