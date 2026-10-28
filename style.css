@@ -45,11 +45,12 @@ button.ghost{background:none;border-color:transparent;color:var(--muted);padding
 button:disabled{opacity:.5;cursor:not-allowed}
 .top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 .brand{display:flex;flex-direction:column;gap:2px;padding-bottom:10px;border-bottom:1px solid var(--line)}
-.brand .id{display:flex;align-items:center;gap:12px;min-width:0}
+.brand .top{flex-wrap:nowrap}
+.brand .id{display:flex;align-items:center;gap:8px;flex:none}
 .brand .words{display:flex;flex-direction:column;gap:2px;min-width:0}
-.brand .name{font-family:var(--display);font-weight:700;font-size:24px;line-height:1.1;letter-spacing:-.01em;color:var(--accent-text)}
-.brand .logo{width:52px;height:52px;flex:none;background:var(--accent-text);-webkit-mask:url(monetrip-mark.svg) center/contain no-repeat;mask:url(monetrip-mark.svg) center/contain no-repeat}
-.brand .tag{font-size:14px;color:var(--muted);font-style:italic}
+.brand .name{font-family:var(--display);font-weight:700;font-size:22px;line-height:1.1;letter-spacing:-.01em;color:var(--accent-text)}
+.brand .logo{width:36px;height:36px;flex:none;background:var(--accent-text);-webkit-mask:url(monetrip-mark.svg) center/contain no-repeat;mask:url(monetrip-mark.svg) center/contain no-repeat}
+.brand .tag{font-size:13px;color:var(--muted);font-style:italic}
 .back{background:none;border:none;color:var(--accent-text);padding:0;font-weight:600}
 .trips{display:flex;flex-direction:column;gap:8px}
 .trip{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 16px;background:var(--surface);border:1px solid var(--line);border-radius:10px;text-align:left;width:100%}
@@ -101,7 +102,9 @@ details summary{cursor:pointer;font-weight:600;color:var(--accent-text)}
 
 .signin{align-items:flex-start}
 .gbtn{display:inline-flex;align-items:center;gap:10px}
-.who{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted)}
+.who{display:flex;align-items:center;justify-content:flex-end;gap:10px;font-size:13px;color:var(--muted);min-width:0}
+.who>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.who button{flex:none}
 .who img{width:24px;height:24px;border-radius:50%}
 .panel.danger{border-color:var(--danger)}
 .danger-btn{background:var(--danger);border-color:var(--danger);color:var(--surface)}
