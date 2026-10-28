@@ -281,7 +281,16 @@ function tripView() {
     };
     const allDone = s.transfers.length && s.transfers.every(x => (t.paid || {})[x.from + "_" + x.to]);
     out.push(h("div", { class: "panel" },
-      h("div", { class: "top" }, h("h2", { text: "Pay back" }), allDone ? h("span", { class: "pill ok", text: "All paid" }) : h("span", { class: "muted", text: `${s.transfers.length} ${s.transfers.length === 1 ? "transfer" : "transfers"} in total` })),
+      h("div", { class: "top" }, h("h2", { text: "Pay back" }),
+        h("span", { class: "head-right" },
+          allDone ? h("span", { class: "pill ok", text: "All paid" }) : h("span", { class: "muted", text: `${s.transfers.length} ${s.transfers.length === 1 ? "transfer" : "transfers"}` }),
+          h("button", { class: "icon-btn close-btn", title: "Cancel settle up", "aria-label": "Cancel settle up", onclick: async ev => {
+            const b = ev.currentTarget;
+            if (!b.dataset.sure) { b.dataset.sure = "1"; b.classList.add("confirm"); b.textContent = "Cancel plan?"; setTimeout(() => { if (b.isConnected) { delete b.dataset.sure; b.classList.remove("confirm"); b.textContent = "✕"; } }, 3000); return; }
+            b.disabled = true;
+            try { await updateDoc(doc(db, "trips", t.id), { settlement: null, paid: {} }); toast("Settle up cancelled"); }
+            catch { b.disabled = false; toast("Couldn't cancel. Try again."); }
+          } }, "✕"))),
       stale ? h("p", { class: "notice", text: "Expenses changed after this plan was made. Settle up again to update it." }) : null,
       !s.transfers.length ? h("p", { class: "muted", text: "Everyone is even. Nobody needs to pay anything." }) : null,
       minePay.length ? h("h3", { text: "Your list" }) : s.transfers.length ? h("p", { class: "muted", text: "You're even. Nothing to pay or collect." }) : null,

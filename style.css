@@ -112,3 +112,7 @@ details summary{cursor:pointer;font-weight:600;color:var(--accent)}
 .pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .pair>label{min-width:0}
 .hint{font-size:12px;font-weight:400;color:var(--muted)}
+.head-right{display:flex;align-items:center;gap:6px}
+.close-btn{color:var(--muted);font-size:16px;opacity:1}
+.close-btn:hover{background:var(--accent-soft)}
+.close-btn.confirm{width:auto;padding:0 10px;color:var(--owe);font-size:14px;font-weight:600}
