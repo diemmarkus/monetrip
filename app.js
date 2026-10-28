@@ -403,7 +403,7 @@ function tripView() {
           toast(transfers.length ? `Done: ${transfers.length} ${transfers.length === 1 ? "transfer" : "transfers"} settle everything` : "Everyone is already even"); }
         catch { toast("Couldn't save the plan. Try again."); ev.target.disabled = false; }
       } }, s ? "Settle up again" : "Settle up")),
-    h("div", { class: "list" }, ids.map(id => {
+    h("div", { class: "list" }, [...ids].sort((a, b) => memberName(t, a).localeCompare(memberName(t, b), "de", { sensitivity: "base" })).map(id => {
       const b = bal[id];
       return h("div", { class: "li" },
         h("span", {}, h("b", { text: memberName(t, id) }), id === mine ? h("span", { class: "muted", text: " (you)" }) : null),
