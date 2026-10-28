@@ -445,16 +445,7 @@ function tripView() {
     out.push(h("div", { class: "panel" },
       h("div", { class: "top" }, h("h2", { text: "Pay back" }),
         h("span", { class: "head-right" },
-          h("span", { class: "muted", text: `${s.transfers.length} ${s.transfers.length === 1 ? "transfer" : "transfers"} left` }),
-          h("button", { class: "icon-btn close-btn", title: "Close pay back", "aria-label": "Close pay back", onclick: async ev => {
-            // Hide straight away and save; Undo brings the plan back.
-            const before = s, panel = ev.currentTarget.closest(".panel");
-            panel.hidden = true;
-            try {
-              await updateDoc(doc(db, "trips", t.id), { settlement: null, paid: {} });
-              toast("Pay back closed", { label: "Undo", run: () => updateDoc(doc(db, "trips", t.id), { settlement: before }).catch(() => toast("Couldn't bring it back. Tap Settle up instead.")) });
-            } catch { panel.hidden = false; toast("Couldn't close it. Try again."); }
-          } }, "✕"))),
+          h("span", { class: "muted", text: `${s.transfers.length} ${s.transfers.length === 1 ? "transfer" : "transfers"} left` }))),
       stale ? h("p", { class: "notice", text: "Expenses changed after this plan was made. Settle up again to update it." }) : null,
       s.transfers.length ? h("p", { class: "muted small", text: "Marking a transfer as paid adds it to the expenses as a payment, so you can settle one at a time." }) : null,
       !s.transfers.length ? h("p", { class: "muted", text: "Everyone is even. Nobody needs to pay anything." }) : null,
