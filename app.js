@@ -446,12 +446,14 @@ function tripView() {
       h("div", { class: "top" }, h("h2", { text: "Pay back" }),
         h("span", { class: "head-right" },
           h("span", { class: "muted", text: `${s.transfers.length} ${s.transfers.length === 1 ? "transfer" : "transfers"} left` }),
-          h("button", { class: "icon-btn close-btn", title: "Cancel settle up", "aria-label": "Cancel settle up", onclick: async ev => {
-            const b = ev.currentTarget;
-            if (!b.dataset.sure) { b.dataset.sure = "1"; b.classList.add("confirm"); b.textContent = "Cancel?"; setTimeout(() => { if (b.isConnected) { delete b.dataset.sure; b.classList.remove("confirm"); b.textContent = "✕"; } }, 3000); return; }
-            b.disabled = true;
-            try { await updateDoc(doc(db, "trips", t.id), { settlement: null, paid: {} }); toast("Settle up cancelled"); }
-            catch { b.disabled = false; toast("Couldn't cancel. Try again."); }
+          h("button", { class: "icon-btn close-btn", title: "Close pay back", "aria-label": "Close pay back", onclick: async ev => {
+            // Hide straight away and save; Undo brings the plan back.
+            const before = s, panel = ev.currentTarget.closest(".panel");
+            panel.hidden = true;
+            try {
+              await updateDoc(doc(db, "trips", t.id), { settlement: null, paid: {} });
+              toast("Pay back closed", { label: "Undo", run: () => updateDoc(doc(db, "trips", t.id), { settlement: before }).catch(() => toast("Couldn't bring it back. Tap Settle up instead.")) });
+            } catch { panel.hidden = false; toast("Couldn't close it. Try again."); }
           } }, "✕"))),
       stale ? h("p", { class: "notice", text: "Expenses changed after this plan was made. Settle up again to update it." }) : null,
       s.transfers.length ? h("p", { class: "muted small", text: "Marking a transfer as paid adds it to the expenses as a payment, so you can settle one at a time." }) : null,
