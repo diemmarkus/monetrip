@@ -336,7 +336,10 @@ function tripView() {
       if (bad) { xerr.hidden = false; xerr.textContent = bad; return; }
       const btn = f.querySelector("button[type=submit]"); btn.disabled = true;
       try { await setDoc(doc(db, "trips", t.id, "expenses", rid()), { desc: f.xdesc.value.trim(), amount, currency: c, rate, paidBy: f.xpaid.value, split, at: Date.now(), by: mine });
-        f.xdesc.value = ""; f.xamt.value = ""; preview(f); toast("Expense added"); }
+        // The live update may already have redrawn the form, so reset whichever form is on screen now.
+        const nf = app.querySelector(".xform") || f;
+        nf.reset(); nf.xrate.value = ""; nf._resync?.(); xerr.hidden = true;
+        toast("Expense added"); }
       catch { xerr.hidden = false; xerr.textContent = "Couldn't save the expense. Try again."; }
       btn.disabled = false;
     } },
