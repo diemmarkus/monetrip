@@ -434,6 +434,10 @@ function tripView() {
     preview(f);
   };
   const editing = ui.editing ? cur.expenses.find(x => x.id === ui.editing) : null;
+  // Tick the same people as in this person's own most recent expense; everyone if they haven't added one yet.
+  const lastOwn = cur.expenses.filter(x => x.by === mine).reduce((best, x) => !best || (x.at || 0) > (best.at || 0) ? x : best, null);
+  const lastSplit = (lastOwn?.split || []).filter(id => ids.includes(id));
+  const defaultSplit = new Set(lastSplit.length ? lastSplit : ids);
   if (ui.editing && !editing && cur.expenses.length) ui.editing = null;
   const iconBtn = h("button", { type: "button", class: "icon-pick", "aria-label": "Choose an icon", "aria-expanded": "false",
     onclick: () => { picks.hidden = !picks.hidden; iconBtn.setAttribute("aria-expanded", String(!picks.hidden)); } });
@@ -475,7 +479,7 @@ function tripView() {
       h("label", {}, "Paid by", h("select", { id: "xpaid", name: "xpaid" }, ids.map(id => h("option", { value: id, selected: id === mine }, memberName(t, id) + (id === mine ? " (you)" : ""))))),
       h("label", {}, "Date", h("input", { id: "xdate", name: "xdate", type: "date", value: isoDay(Date.now()), max: isoDay(Date.now() + 864e5 * 366) }))),
     h("div", {}, h("h3", { text: "Split equally between", style: "margin-bottom:8px" }),
-      h("div", { class: "checks" }, ids.map(id => h("label", {}, h("input", { type: "checkbox", name: "xsplit", value: id, checked: true, id: "xs-" + id }), memberName(t, id))))),
+      h("div", { class: "checks" }, ids.map(id => h("label", {}, h("input", { type: "checkbox", name: "xsplit", value: id, checked: defaultSplit.has(id), id: "xs-" + id }), memberName(t, id))))),
     xerr,
     editing
       ? h("div", { class: "pair" },
