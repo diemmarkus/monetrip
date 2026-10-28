@@ -181,3 +181,12 @@ input[type=date]{min-height:44px;-webkit-appearance:none;appearance:none}
 .fx-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .fx-conv{font-family:var(--mono);font-size:14px;color:var(--ink);font-variant-numeric:tabular-nums}
 .fx-info{font-size:13px;color:var(--muted);margin:0}
+.forfield{display:flex;flex-direction:column;gap:4px}
+.flabel{font-size:13px;color:var(--muted);font-weight:500}
+.forbtn{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;font-weight:400;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 10px}
+.forbtn #forsum{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chev{flex:none;width:8px;height:8px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:translateY(-2px) rotate(45deg);opacity:.7}
+.forbtn[aria-expanded="true"]{border-color:var(--accent-text)}
+.forbtn[aria-expanded="true"] .chev{transform:translateY(2px) rotate(-135deg)}
+#forlist{padding-top:6px}
+@media (prefers-reduced-motion:no-preference){.chev{transition:transform .15s}}

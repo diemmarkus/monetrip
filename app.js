@@ -189,7 +189,9 @@ const iconFor = (t, e) => e.icon || suggestIcon(t, e.desc);
 /* ---------- expense form helpers ---------- */
 function resetExpenseForm() {
   const f = app.querySelector(".xform"); if (!f) return;
-  f.reset(); f.xrate.value = ""; f.xicon.value = ""; f._resync?.(); f._syncIcon?.();
+  f.reset(); f.xrate.value = ""; f.xicon.value = "";
+  ui.forOpen = false; f.querySelector("#forlist").hidden = true; f.querySelector("#forbtn").setAttribute("aria-expanded", "false");
+  f._resync?.(); f._syncIcon?.();
 }
 function startEdit(e) {
   ui.editing = e.id; render();
@@ -451,7 +453,7 @@ function tripView() {
       onkeydown: e => { if (e.key === "Enter") e.preventDefault(); } }),
     PICKS.map(ic => h("button", { type: "button", onclick: () => pick(ic) }, ic)),
     h("button", { type: "button", class: "auto", onclick: () => pick("") }, "Auto"));
-  const form = h("form", { class: "panel xform", oninput: e => { if (e.target.id === "xrate") e.currentTarget.dataset.auto = ""; if (e.target.id === "xdesc") form._syncIcon(); preview(e.currentTarget); }, onsubmit: async e => {
+  const form = h("form", { class: "panel xform", oninput: e => { if (e.target.id === "xrate") e.currentTarget.dataset.auto = ""; if (e.target.id === "xdesc") form._syncIcon(); if (e.target.name === "xsplit") form._syncFor(); preview(e.currentTarget); }, onsubmit: async e => {
       e.preventDefault(); const f = e.target; xerr.hidden = true;
       const amount = parseNum(f.xamt.value), c = f.xccy.value, rate = c === ccy ? 1 : parseNum(f.xrate.value);
       const split = [...f.querySelectorAll("input[name=xsplit]:checked")].map(i => i.value);
@@ -483,8 +485,13 @@ function tripView() {
     h("div", { class: "pair" },
       h("label", {}, "Paid by", h("select", { id: "xpaid", name: "xpaid" }, ids.map(id => h("option", { value: id, selected: id === mine }, memberName(t, id) + (id === mine ? " (you)" : ""))))),
       h("label", {}, "Date", h("input", { id: "xdate", name: "xdate", type: "date", value: isoDay(Date.now()), max: isoDay(Date.now() + 864e5 * 366) }))),
-    h("div", {}, h("h3", { text: "Split equally between", style: "margin-bottom:8px" }),
-      h("div", { class: "checks" }, ids.map(id => h("label", {}, h("input", { type: "checkbox", name: "xsplit", value: id, checked: defaultSplit.has(id), id: "xs-" + id }), memberName(t, id))))),
+    h("div", { class: "forfield" },
+      h("span", { class: "flabel", id: "forlbl", text: "For" }),
+      h("button", { type: "button", class: "forbtn", id: "forbtn", "aria-labelledby": "forlbl forsum", "aria-controls": "forlist", "aria-expanded": String(!!ui.forOpen),
+        onclick: ev => { ui.forOpen = !ui.forOpen; const b = ev.currentTarget; b.setAttribute("aria-expanded", String(ui.forOpen)); b.form.querySelector("#forlist").hidden = !ui.forOpen; } },
+        h("span", { id: "forsum" }), h("span", { class: "chev", "aria-hidden": "true" })),
+      h("div", { class: "checks", id: "forlist", role: "group", "aria-label": "Split equally between", hidden: !ui.forOpen },
+        ids.map(id => h("label", {}, h("input", { type: "checkbox", name: "xsplit", value: id, checked: defaultSplit.has(id), id: "xs-" + id }), memberName(t, id))))),
     xerr,
     editing
       ? h("div", { class: "pair" },
@@ -499,7 +506,15 @@ function tripView() {
     for (const b of picks.querySelectorAll("button")) b.setAttribute("aria-pressed", String(b.classList.contains("auto") ? !own : b.textContent === own));
   };
   form._syncIcon();
+  form._syncFor = () => {
+    const on = [...form.querySelectorAll("input[name=xsplit]")].filter(c => c.checked).map(c => c.value);
+    const names = on.map(id => id === mine ? "you" : memberName(t, id));
+    $("#forsum", form).textContent = !on.length ? "Nobody yet"
+      : on.length === ids.length ? (ids.length > 1 ? `Everyone (${ids.length})` : "Just you")
+      : names.length <= 3 ? names.join(", ").replace(/^you/, "You") : names.slice(0, 2).join(", ").replace(/^you/, "You") + ` +${names.length - 2}`;
+  };
   form._resync = () => {
+    form._syncFor();
     const c = form.xccy.value; rateBox.hidden = c === ccy; form.xrate.required = c !== ccy;
     $("#fxfrom", rateBox).textContent = "1 " + c + " =";
     const a = c === ccy ? null : autoRate(c, ccy);
