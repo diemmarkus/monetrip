@@ -460,7 +460,10 @@ function tripView() {
       if (data.icon !== (editing?.icon || "")) rememberIcon(t, data.desc, data.icon);
       try {
         if (editing) { await updateDoc(doc(db, "trips", t.id, "expenses", editing.id), { ...data, changed: Date.now() }); ui.editing = null; render(); resetExpenseForm(); toast("Expense updated"); }
-        else { await setDoc(doc(db, "trips", t.id, "expenses", rid()), { ...data, at: Date.now(), by: mine }); resetExpenseForm(); toast("Expense added"); }
+        else {
+          const newId = rid(); ui.justAdded = { id: newId, t0: Date.now() };
+          await setDoc(doc(db, "trips", t.id, "expenses", newId), { ...data, at: Date.now(), by: mine }); resetExpenseForm(); toast("Expense added");
+        }
       }
       catch { xerr.hidden = false; xerr.textContent = "Couldn't save the expense. Try again."; }
       btn.disabled = false;
@@ -518,7 +521,10 @@ function tripView() {
         h("b", { text: e.desc }),
         h("span", { class: "act" }, h("span", { class: "num", text: fmt(e.amount, e.currency) })),
         h("span", { class: "sub", text: `${memberName(t, e.paidBy)} paid · split ${e.split.length} ways${e.currency !== ccy ? ` · ${money(base, ccy)} at ${e.rate}` : ""}` }));
-      const row = h("div", { class: "swipe" },
+      // A just-added expense folds into the list. Live updates can redraw the list mid-animation,
+      // so resume it where it was with a negative delay instead of restarting.
+      const ja = ui.justAdded, age = ja && ja.id === e.id ? Date.now() - ja.t0 : Infinity;
+      const row = h("div", { class: "swipe" + (age < 900 ? " entering" : ""), style: age < 900 ? `animation-delay:${-age}ms` : null },
         h("div", { class: "sw-bg sw-del", "aria-hidden": "true" }, "Delete"),
         h("div", { class: "sw-bg sw-edit", "aria-hidden": "true" }, "Edit"),
         fg);
