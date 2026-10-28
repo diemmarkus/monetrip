@@ -53,6 +53,15 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .ticket{display:grid;grid-template-columns:1fr auto;gap:6px 16px;align-items:end;padding:20px;border-radius:12px;background:var(--accent);color:var(--accent-ink)}
 .ticket h1{font-size:28px}
 .ticket .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.1em;opacity:.8}
+.title-row{display:flex;align-items:center;gap:6px}
+.title-row h1{min-width:0;overflow-wrap:anywhere}
+.icon-btn{display:inline-grid;place-items:center;min-height:36px;width:36px;padding:0;border:none;border-radius:8px;background:transparent;color:inherit;opacity:.8;flex:0 0 auto}
+.icon-btn:hover{opacity:1;background:rgba(255,255,255,.15)}
+.rename{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.rename input{background:var(--surface);font-family:var(--display);font-size:20px;font-weight:600}
+.rename-actions{display:flex;gap:8px}
+button.on-accent{background:var(--accent-ink);color:var(--accent);border-color:var(--accent-ink)}
+button.ghost.on-accent{background:none;color:var(--accent-ink);border-color:transparent}
 .ticket .ref{font-family:var(--mono);font-size:22px;letter-spacing:.2em}
 .ticket .meta{grid-column:1/-1;display:flex;gap:18px;flex-wrap:wrap;border-top:1px dashed currentColor;padding-top:10px;margin-top:6px;font-size:13px}
 .chips{display:flex;flex-wrap:wrap;gap:6px}

@@ -226,8 +226,28 @@ function tripView() {
   const total = cur.expenses.reduce((s, e) => s + Math.round(e.amount * (e.rate || 1) * 100), 0);
   const out = [brand(), back];
 
+  const isAdmin = t.createdBy === me.uid;
+  const pencil = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+  const titleBlock = isAdmin && ui.renaming === t.id
+    ? h("form", { class: "rename", onsubmit: async e => {
+        e.preventDefault(); const n = e.target.rname.value.trim();
+        if (!n || n === t.name) { ui.renaming = null; render(); return; }
+        e.target.querySelector("button").disabled = true;
+        try { await updateDoc(doc(db, "trips", t.id), { name: n }); ui.renaming = null; render(); toast("Trip renamed"); }
+        catch { e.target.querySelector("button").disabled = false; toast("Couldn't rename the trip. Try again."); }
+      } },
+        h("input", { id: "rname", name: "rname", value: t.name, maxlength: 60, required: true, "aria-label": "Trip name",
+          onkeydown: e => { if (e.key === "Escape") { ui.renaming = null; render(); } } }),
+        h("div", { class: "rename-actions" },
+          h("button", { type: "submit", class: "on-accent" }, "Save"),
+          h("button", { type: "button", class: "ghost on-accent", onclick: () => { ui.renaming = null; render(); } }, "Cancel")))
+    : h("div", { class: "title-row" }, h("h1", { text: t.name }),
+        isAdmin ? h("button", { class: "icon-btn", title: "Rename trip", "aria-label": "Rename trip",
+          onclick: () => { ui.renaming = t.id; render(); const i = document.getElementById("rname"); i.value = t.name; i.focus(); i.select(); } }) : null);
+  if (isAdmin && ui.renaming !== t.id) titleBlock.querySelector(".icon-btn").innerHTML = pencil;
+
   out.push(h("div", { class: "ticket" },
-    h("div", {}, h("div", { class: "lbl", text: "Trip" }), h("h1", { text: t.name })),
+    h("div", { style: "min-width:0" }, h("div", { class: "lbl", text: "Trip" }), titleBlock),
     h("div", { style: "text-align:right" }, h("div", { class: "lbl", text: "Trip code" }), h("div", { class: "ref", text: t.code })),
     h("div", { class: "meta" }, h("span", {}, "Total ", h("b", { class: "num", text: money(total, ccy) })), h("span", {}, `${ids.length} ${ids.length === 1 ? "person" : "people"}`), h("span", {}, `${cur.expenses.length} expenses`), h("span", {}, (t.localCurrency && t.localCurrency !== ccy ? "Paying in " + t.localCurrency + " · " : "") + "Settles in " + ccy))));
 
