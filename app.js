@@ -3,11 +3,11 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signI
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, deleteField, FieldPath }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js?v=54";
-import { settle, balances } from "./settle.js?v=54";
-import { autoIcon, PICKS } from "./icons.js?v=54";
-import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=54";
-import { legalDoc } from "./legal.js?v=54";
+import { firebaseConfig } from "./firebase-config.js?v=56";
+import { settle, balances } from "./settle.js?v=56";
+import { autoIcon, PICKS } from "./icons.js?v=56";
+import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=56";
+import { legalDoc } from "./legal.js?v=56";
 
 const CURRENCIES = ["EUR","USD","GBP","CHF","CZK","HUF","PLN","TRY","SEK","NOK","DKK","JPY","CAD","AUD","THB"];
 const $ = (s, r = document) => r.querySelector(s);
@@ -776,6 +776,8 @@ function tripView() {
 
 /* ---------- boot ---------- */
 loadRates().then(() => { if (me && cur.trip) render(); });
+// Offline cache: makes repeat visits open instantly and lets MoneTrip open without a connection.
+if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
 onAuthStateChanged(auth, async user => {
   me = user; unsubTrips?.(); trips = []; tripsLoaded = false;
   if (!me) { render(); return; }
