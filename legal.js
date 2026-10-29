@@ -80,11 +80,10 @@ function privacy(l) {
       { h: "Dienste, die wir nutzen", p: [
         `Firebase Authentication und Cloud Firestore (Google Ireland Ltd., Gordon House, Barrow Street, Dublin 4, Irland): Anmeldung und Speicherung der Reisedaten. Die Datenbank liegt in der Region ${o.firestoreRegion}.`,
         "GitHub Pages (GitHub B.V., Niederlande, Tochter der GitHub Inc., USA): Hosting der Website. Beim Aufruf verarbeitet GitHub technisch notwendige Daten wie deine IP-Adresse.",
-        "Google Fonts (Google Ireland Ltd.): Die Schriftarten werden von Google-Servern geladen, dabei wird deine IP-Adresse an Google übermittelt.",
         "Frankfurter (frankfurter.dev): Abruf der Wechselkurse der Europäischen Zentralbank direkt aus deinem Browser; dabei wird deine IP-Adresse übermittelt.",
         "Google und GitHub sind nach dem EU-US Data Privacy Framework zertifiziert; eine Übermittlung in die USA stützt sich darauf (Art. 45 DSGVO) sowie auf Standardvertragsklauseln.",
       ] },
-      { h: "Speicherung auf deinem Gerät", p: ["MoneTrip setzt keine Tracking-Cookies. Im Browser-Speicher liegen nur Daten, die für die Funktion nötig sind:", ...storage] },
+      { h: "Speicherung auf deinem Gerät", p: ["Schriftarten werden von MoneTrip selbst ausgeliefert, nicht von Google. MoneTrip setzt keine Tracking-Cookies. Im Browser-Speicher liegen nur Daten, die für die Funktion nötig sind:", ...storage] },
       { h: "Speicherdauer", p: [
         "Reisedaten bleiben gespeichert, bis die Person, die die Reise erstellt hat, sie löscht; dabei werden alle Ausgaben der Reise mitgelöscht. Einzelne Ausgaben können jederzeit gelöscht werden.",
         "Dein Konto und deine Daten löschen wir auf Anfrage per E-Mail.",
@@ -112,11 +111,10 @@ function privacy(l) {
       { h: "Services we use", p: [
         `Firebase Authentication and Cloud Firestore (Google Ireland Ltd., Gordon House, Barrow Street, Dublin 4, Ireland): sign-in and storing trip data. The database is in the ${o.firestoreRegion} region.`,
         "GitHub Pages (GitHub B.V., Netherlands, a subsidiary of GitHub Inc., USA): hosting the website. When you visit, GitHub processes technically necessary data such as your IP address.",
-        "Google Fonts (Google Ireland Ltd.): fonts are loaded from Google's servers, which sends your IP address to Google.",
         "Frankfurter (frankfurter.dev): fetches European Central Bank exchange rates directly from your browser, which sends your IP address.",
         "Google and GitHub are certified under the EU-US Data Privacy Framework; transfers to the USA rely on it (Art. 45 GDPR) and on standard contractual clauses.",
       ] },
-      { h: "Storage on your device", p: ["MoneTrip sets no tracking cookies. Browser storage only holds what the app needs to work:", ...storage] },
+      { h: "Storage on your device", p: ["Fonts are served by MoneTrip itself, not by Google. MoneTrip sets no tracking cookies. Browser storage only holds what the app needs to work:", ...storage] },
       { h: "How long we keep data", p: [
         "Trip data is kept until the person who created the trip deletes it, which also deletes all its expenses. Single expenses can be deleted at any time.",
         "We delete your account and data on request by email.",
