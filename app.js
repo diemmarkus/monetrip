@@ -138,10 +138,16 @@ async function deleteTrip(t) {
   const id = t.id; closeTrip();
   await deleteDoc(doc(db, "trips", id));
 }
-async function claimMember(mid) { await updateDoc(doc(db, "trips", cur.trip.id), { [`members.${mid}.uid`]: me.uid }); ui.joinPick = false; render(); }
+async function claimMember(mid) {
+  const prev = myMemberId(cur.trip), upd = { [`members.${mid}.uid`]: me.uid };
+  if (prev && prev !== mid) upd[`members.${prev}.uid`] = null; // switching person: free the old spot
+  await updateDoc(doc(db, "trips", cur.trip.id), upd); ui.joinPick = false; render();
+}
 async function addMember(name, withMe) {
   const mid = rid(8);
-  await updateDoc(doc(db, "trips", cur.trip.id), { [`members.${mid}`]: { name, uid: withMe ? me.uid : null } });
+  const prev = withMe ? myMemberId(cur.trip) : null, upd = { [`members.${mid}`]: { name, uid: withMe ? me.uid : null } };
+  if (prev) upd[`members.${prev}.uid`] = null;
+  await updateDoc(doc(db, "trips", cur.trip.id), upd);
   if (withMe) { ui.joinPick = false; render(); }
 }
 
@@ -496,16 +502,17 @@ function tripView() {
     (match ? claimMember(match) : addMember(n, true)).then(() => toast(tr("trip.welcome", { name: n }))).catch(() => { cur.autoJoined = false; toast(tr("trip.addFailed")); });
     return [...out, h("div", { class: "panel" }, h("p", { class: "muted", text: tr("trip.adding") }))];
   }
-  if (!mine || ui.joinPick) {
+  // "Which one are you?": at the top for someone not on the trip yet; inside People when switching.
+  const whoPicker = () => {
     const free = ids.filter(id => !t.members[id].uid);
     const nf = h("form", { class: "row", onsubmit: async e => { e.preventDefault(); const n = e.target.jn.value.trim(); if (n) await addMember(n, true); } },
-      h("label", { class: "grow" }, tr("trip.joinNew"), h("input", { id: "jn", name: "jn", value: firstName(), required: true, maxlength: 30 })),
+      h("label", { class: "grow" }, tr("trip.joinNew"), h("input", { id: "jn", name: "jn", value: mine ? "" : firstName(), required: true, maxlength: 30 })),
       h("button", { class: "primary", type: "submit" }, tr("trip.join")));
-    out.push(h("div", { class: "panel" }, h("h2", { text: tr("trip.whoAreYou") }),
+    return h("div", { class: mine ? "switcher" : "panel", id: "whopick" }, mine ? h("h3", { text: tr("trip.whoAreYou") }) : h("h2", { text: tr("trip.whoAreYou") }),
       free.length ? h("div", { class: "chips" }, free.map(id => h("button", { onclick: () => claimMember(id) }, tr("trip.imName", { name: t.members[id].name })))) : null, nf,
-      mine ? h("button", { class: "ghost", onclick: () => { ui.joinPick = false; render(); } }, tr("cancel")) : null));
-    if (!mine) return out;
-  }
+      mine ? h("button", { class: "ghost", style: "align-self:flex-start", onclick: () => { ui.joinPick = false; render(); } }, tr("cancel")) : null);
+  };
+  if (!mine) { out.push(whoPicker()); return out; }
 
   /* settlement */
   const s = t.settlement;
@@ -723,7 +730,11 @@ function tripView() {
       navigator.share ? h("button", { class: "primary", style: "margin-top:10px", onclick: async () => {
           try { await navigator.share({ url: link }); } catch {}
         } }, tr("share")) : null),
-    gform, h("button", { class: "ghost", style: "align-self:flex-start", onclick: () => { ui.joinPick = true; render(); } }, tr("ppl.switch"))));
+    gform, ui.joinPick ? whoPicker() : h("button", { class: "ghost", style: "align-self:flex-start", onclick: () => {
+      ui.joinPick = true; render();
+      const w = $("#whopick"); w?.scrollIntoView({ block: "nearest", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+      w?.querySelector("button")?.focus({ preventScroll: true });
+    } }, tr("ppl.switch"))));
 
   if (t.createdBy === me.uid) {
     const n = cur.expenses.length;
