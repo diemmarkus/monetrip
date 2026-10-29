@@ -1,5 +1,5 @@
 /* Fonts are self-hosted (no requests to Google). Subset to Latin + Latin Extended; licences in fonts/. */
-@font-face{font-family:"Bricolage Grotesque";src:url(fonts/bricolage-grotesque.woff2) format("woff2");font-weight:500 700;font-stretch:100%;font-display:swap}
+@font-face{font-family:"Plus Jakarta Sans";src:url(fonts/plus-jakarta-sans.woff2) format("woff2");font-weight:500 700;font-display:swap}
 @font-face{font-family:"Figtree";src:url(fonts/figtree.woff2) format("woff2");font-weight:400 600;font-display:swap}
 @font-face{font-family:"JetBrains Mono";src:url(fonts/jetbrains-mono-500.woff2) format("woff2");font-weight:500;font-display:swap}
 *,*::before,*::after{box-sizing:border-box}
@@ -9,7 +9,7 @@
   --accent:#34e5eb; --accent-ink:#03363a; --accent-soft:#d9f8fa; --accent-text:#07767c;
   --bar-pos:#34e5eb; --bar-neg:#ed9726; --danger:#b23a2e;
   --owe:#b0620a; --get:#07767c; --warn:#9a6a00; --warn-soft:#fbf1d8;
-  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --display:"Plus Jakarta Sans",ui-sans-serif,system-ui,sans-serif;
   --body:"Figtree",ui-sans-serif,system-ui,sans-serif;
   --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
 }

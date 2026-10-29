@@ -9,7 +9,7 @@ Split trip expenses with friends. Create a trip, invite people with a link, log 
 - Static site on GitHub Pages: `index.html`, `style.css`, `app.js`, `settle.js`
 - Firebase Authentication (Google sign-in) and Cloud Firestore for shared data
 - Exchange rates from the ECB via [Frankfurter](https://frankfurter.dev)
-- Self-hosted fonts in `fonts/` (Bricolage Grotesque, Figtree, JetBrains Mono; SIL Open Font License)
+- Self-hosted fonts in `fonts/` (Plus Jakarta Sans, Figtree, JetBrains Mono; SIL Open Font License)
 - English and German UI (`i18n.js`); imprint and privacy policy in `legal.js`
 
 ## Setup
