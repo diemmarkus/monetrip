@@ -317,6 +317,25 @@ function avatar(size) {
   if (me?.photoURL && !guest) return h("img", { class: "avatar", src: me.photoURL, alt: "", width: size, height: size, referrerpolicy: "no-referrer" });
   return h("span", { class: "avatar" + (guest ? " guest" : ""), "aria-hidden": "true", text: initials(name) });
 }
+/* ---------- theme: system (default), light or dark ---------- */
+function getTheme() { try { return localStorage.getItem("mt-theme") || "system"; } catch { return "system"; } }
+function applyTheme(v) {
+  const root = document.documentElement;
+  if (v === "light" || v === "dark") root.dataset.theme = v; else delete root.dataset.theme;
+  const bg = getComputedStyle(document.body).backgroundColor;
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", bg || "#34e5eb");
+}
+function setTheme(v) { try { v === "system" ? localStorage.removeItem("mt-theme") : localStorage.setItem("mt-theme", v); } catch {} applyTheme(v); }
+function themePicker() {
+  const cur = getTheme();
+  return h("div", { class: "menu-row" }, h("span", { class: "menu-lbl", id: "themelbl", text: tr("theme.label") }),
+    h("div", { class: "seg", role: "radiogroup", "aria-labelledby": "themelbl" },
+      ["system", "light", "dark"].map(v => h("button", { type: "button", role: "radio", "aria-checked": String(cur === v),
+        onclick: ev => { setTheme(v); for (const b of ev.currentTarget.parentNode.children) b.setAttribute("aria-checked", String(b === ev.currentTarget)); } }, tr("theme." + v)))));
+}
+applyTheme(getTheme());
+matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", () => applyTheme(getTheme()));
+
 function closeMenu() { if (!ui.menuOpen) return; ui.menuOpen = false; const m = $("#acctmenu"); if (m) m.hidden = true; $("#acctbtn")?.setAttribute("aria-expanded", "false"); }
 document.addEventListener("click", e => { if (ui.menuOpen && !e.target.closest?.(".acct")) closeMenu(); });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && ui.menuOpen) { closeMenu(); $("#acctbtn")?.focus(); } });
@@ -338,6 +357,7 @@ function brand() {
           h("span", { text: guest ? tr("auth.guest") : (me.email || "") }))),
       guest ? h("button", { class: "menu-item strong", role: "menuitem", onclick: () => { closeMenu(); saveWithGoogle(); } }, tr("auth.signInGoogle")) : null,
       h("button", { class: "menu-item", role: "menuitem", lang: other, onclick: () => { setLang(other); render(); } }, other === "de" ? "Deutsch" : "English"),
+      themePicker(),
       signOutBtn);
     right = h("div", { class: "acct" },
       h("button", { class: "avatar-btn", id: "acctbtn", "aria-haspopup": "menu", "aria-controls": "acctmenu", "aria-expanded": String(!!ui.menuOpen),

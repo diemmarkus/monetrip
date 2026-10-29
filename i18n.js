@@ -23,6 +23,7 @@ const DICT = {
     "auth.signOut": "Sign out", "auth.signOutSure": "Sure? You'll lose access",
     "auth.guest": "Guest", "auth.guestSuffix": " · guest",
     "auth.saveWithGoogle": "Save with Google", "auth.signInGoogle": "Sign in with Google",
+    "theme.label": "Theme", "theme.system": "System", "theme.light": "Light", "theme.dark": "Dark",
 
     "signin.needName": "Enter your first name.",
     "signin.needCode": "Enter the six-character trip code.",
@@ -140,6 +141,7 @@ const DICT = {
     "auth.signOut": "Abmelden", "auth.signOutSure": "Sicher? Als Gast kommst du dann nicht mehr rein",
     "auth.guest": "Gast", "auth.guestSuffix": " · Gast",
     "auth.saveWithGoogle": "Mit Google sichern", "auth.signInGoogle": "Mit Google anmelden",
+    "theme.label": "Design", "theme.system": "System", "theme.light": "Hell", "theme.dark": "Dunkel",
 
     "signin.needName": "Bitte gib deinen Vornamen ein.",
     "signin.needCode": "Bitte gib den sechsstelligen Code ein.",
