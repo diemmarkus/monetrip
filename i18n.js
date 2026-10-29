@@ -218,7 +218,7 @@ const DICT = {
     "list.swipeBoth": "← Löschen · → Bearbeiten", "list.swipeDel": "← Löschen",
     "list.ariaEdit": "E zum Bearbeiten, ", "list.ariaDel": "Entf zum Löschen.",
     "list.paymentSub": "Rückzahlung",
-    "list.paidSplit": { one: "{name} hat bezahlt · für eine Person", other: "{name} hat bezahlt · für {n} Personen" },
+    "list.paidSplit": { one: "{name} · für eine Person", other: "{name} · für {n} Personen" },
     "list.converted": " · {amount}",
     "list.delete": "Löschen", "list.edit": "Bearbeiten",
     "x.deleted": "Ausgabe gelöscht", "x.restored": "Wiederhergestellt", "x.restoreFailed": "Wiederherstellen hat nicht geklappt.",
