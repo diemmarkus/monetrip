@@ -313,3 +313,5 @@ button.ghost.lang{font-family:var(--mono);font-size:12px;letter-spacing:.06em;pa
 .chip-x:hover{color:var(--danger)}
 .chip.confirm{background:color-mix(in srgb,var(--danger) 14%,var(--surface))}
 .chip.confirm .chip-x{color:var(--danger);font-weight:600;font-size:13px}
+/* Start-up snapshot on screen: wait for the sign-in check before accepting taps */
+html.booting #app button,html.booting #app input,html.booting #app select,html.booting #app .swipe,html.booting #app .trip{pointer-events:none}

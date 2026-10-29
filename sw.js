@@ -1,8 +1,8 @@
 // MoneTrip offline cache (service worker).
 //
-// - The page itself (index.html) is always fetched from the network first, so a new
-//   deploy shows up on the next visit; the cached copy is only used when offline or
-//   when the network takes longer than a few seconds.
+// - The page itself (index.html) comes from the cache right away and is refreshed in
+//   the background. When the refreshed copy differs (a new deploy), open pages get a
+//   message and offer a reload.
 // - Files with a ?v= number (app.js, style.css, the modules) never change under the
 //   same URL, so they come straight from the cache. tools/bump-version.py gives every
 //   deploy new numbers; old copies are removed as new ones arrive.
@@ -10,7 +10,6 @@
 //   cache. Data requests (Firestore, sign-in, exchange rates) are never touched here.
 
 const CACHE = "monetrip-v1";
-const NETWORK_TIMEOUT = 3500;
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.add("./")).catch(() => {}).then(() => self.skipWaiting()));
@@ -29,25 +28,30 @@ self.addEventListener("fetch", e => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
 
-  if (req.mode === "navigate" && url.origin === location.origin) { e.respondWith(pageNetworkFirst(req)); return; }
+  if (req.mode === "navigate" && url.origin === location.origin) { e.respondWith(pageCachedThenRefresh(e)); return; }
   if (FIREBASE_SDK.test(req.url)) { e.respondWith(cacheFirst(req)); return; }
   if (url.origin !== location.origin || !STATIC_EXT.test(url.pathname)) return; // data, APIs: browser as usual
   if (url.searchParams.has("v") || url.pathname.includes("/fonts/")) e.respondWith(cacheFirst(req, true));
   else e.respondWith(staleWhileRevalidate(req));
 });
 
-async function pageNetworkFirst(req) {
+async function pageCachedThenRefresh(e) {
   const cache = await caches.open(CACHE);
-  const network = fetch(req).then(res => {
-    if (res.ok) cache.put("./", res.clone());
+  const hit = await cache.match("./");
+  const hitCopy = hit?.clone(); // read later, after the browser has consumed hit
+  const refresh = fetch(e.request).then(async res => {
+    if (!res.ok) return res;
+    const fresh = res.clone(), text = await res.clone().text();
+    const old = hitCopy ? await hitCopy.text() : null;
+    await cache.put("./", fresh);
+    if (old !== null && old !== text) {
+      const list = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      list.forEach(c => c.postMessage({ type: "monetrip-updated" }));
+    }
     return res;
   });
-  const timeout = new Promise(r => setTimeout(r, NETWORK_TIMEOUT));
-  try {
-    const res = await Promise.race([network, timeout]);
-    if (res) return res;
-  } catch {}
-  return (await cache.match("./")) || network; // offline or slow: last good copy
+  if (hit) { e.waitUntil(refresh.catch(() => {})); return hit; }
+  return refresh; // first visit: nothing cached yet
 }
 
 async function cacheFirst(req, pruneOldVersions = false) {

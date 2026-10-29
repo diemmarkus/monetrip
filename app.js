@@ -3,11 +3,11 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signI
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, deleteField, FieldPath }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js?v=65";
-import { settle, balances } from "./settle.js?v=65";
-import { autoIcon, PICKS } from "./icons.js?v=65";
-import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=65";
-import { legalDoc } from "./legal.js?v=65";
+import { firebaseConfig } from "./firebase-config.js?v=67";
+import { settle, balances } from "./settle.js?v=67";
+import { autoIcon, PICKS } from "./icons.js?v=67";
+import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=67";
+import { legalDoc } from "./legal.js?v=67";
 
 const CURRENCIES = ["EUR","USD","GBP","CHF","CZK","HUF","PLN","TRY","SEK","NOK","DKK","JPY","CAD","AUD","THB"];
 const $ = (s, r = document) => r.querySelector(s);
@@ -93,14 +93,17 @@ const memberName = (trip, id) => trip.members?.[id]?.name || tr("someone");
 function watchTrips() {
   unsubTrips?.();
   unsubTrips = onSnapshot(query(collection(db, "trips"), where("memberUids", "array-contains", me.uid)), { includeMetadataChanges: true }, s => {
+    if (s.empty && s.metadata?.fromCache && trips.length) return; // keep the start-up snapshot until the server answers
     trips = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
     // An empty answer from the device cache may just mean "not synced yet", so wait for the server before saying "no trips".
     if (trips.length || !s.metadata?.fromCache) tripsLoaded = true;
     if (!cur.id) render();
   }, () => toast(tr("err.loadTrips")));
 }
-function openTrip(id) {
-  closeTrip(); cur.id = id; location.hash = "trip-" + id;
+function openTrip(id, keepShown = false) {
+  // keepShown: the trip is already on screen from the start-up snapshot; just attach live updates.
+  if (keepShown && cur.id === id) { cur.unsubs.forEach(u => u()); cur.unsubs = []; } else closeTrip();
+  cur.id = id; if (location.hash !== "#trip-" + id) location.hash = "trip-" + id;
   cur.unsubs.push(onSnapshot(doc(db, "trips", id), s => { cur.trip = s.exists() ? { id: s.id, ...s.data() } : null; if (!cur.trip) cur.missing = true; render(); },
     () => { cur.missing = true; render(); }));
   cur.unsubs.push(onSnapshot(collection(db, "trips", id, "expenses"), s => {
@@ -410,6 +413,37 @@ addEventListener("hashchange", () => {
   if (l === ui.legal) return;
   ui.legalFromApp = !!l; ui.legal = l; render(); if (l) scrollTo(0, 0);
 });
+/* ---------- instant start ----------
+   Firebase checks the sign-in with Google's servers before it hands out any data, even data
+   already stored on the phone. To avoid staring at the splash meanwhile, the last screen is kept
+   in localStorage and drawn immediately; taps wait until the sign-in check is done. */
+const SNAP_KEY = "mt-snap";
+let booting = false, snapTimer = 0;
+function saveSnapshot() {
+  if (booting || !me) return;
+  clearTimeout(snapTimer);
+  snapTimer = setTimeout(() => {
+    try {
+      const withTrip = cur.id && cur.trip;
+      localStorage.setItem(SNAP_KEY, JSON.stringify({ uid: me.uid, name: me.displayName || "", photo: me.photoURL || "", email: me.email || "", anon: !!me.isAnonymous,
+        trips, tripId: withTrip ? cur.id : null, trip: withTrip ? cur.trip : null, expenses: withTrip ? cur.expenses : [] }));
+    } catch {}
+  }, 500);
+}
+function clearSnapshot() { clearTimeout(snapTimer); try { localStorage.removeItem(SNAP_KEY); } catch {} }
+function bootFromSnapshot() {
+  let snap = null; try { snap = JSON.parse(localStorage.getItem(SNAP_KEY) || "null"); } catch {}
+  if (!snap?.uid) return;
+  const tm = location.hash.match(/^#trip-([a-z0-9]+)$/);
+  if (location.hash && !tm) return;          // invite links, imprint: wait for the real sign-in
+  if (tm && tm[1] !== snap.tripId) return;   // a trip we have no copy of
+  booting = true;
+  me = { uid: snap.uid, displayName: snap.name, photoURL: snap.photo, email: snap.email, isAnonymous: snap.anon };
+  trips = snap.trips || []; tripsLoaded = true;
+  if (tm) cur = { id: snap.tripId, trip: snap.trip, expenses: snap.expenses || [], unsubs: [] };
+  document.documentElement.classList.add("booting");
+  render();
+}
 async function alreadyOnTrip(code) {
   try {
     const c = await getDoc(doc(db, "codes", code.toUpperCase()));
@@ -444,6 +478,7 @@ function render() {
   if (sheetScroll) { const sf = $("#sheet .xform"); if (sf) sf.scrollTop = sheetScroll; }
   app.querySelector(".xform")?._syncIcon?.();
   if (ae) document.getElementById(ae)?.focus();
+  saveSnapshot();
 }
 function signInView() {
   const code = (location.hash.match(/^#join-([A-Za-z0-9]{6})$/) || [])[1];
@@ -837,10 +872,23 @@ function tripView() {
 /* ---------- boot ---------- */
 loadRates().then(() => { if (me && cur.trip) render(); });
 // Offline cache: makes repeat visits open instantly and lets MoneTrip open without a connection.
-if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+if ("serviceWorker" in navigator) {
+  addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+  // The page was served from the phone; a newer version just arrived in the background.
+  navigator.serviceWorker.addEventListener("message", e => {
+    if (e.data?.type !== "monetrip-updated") return;
+    if (!ui.sheetOpen && performance.now() < 4000) location.reload(); // still starting up: just switch over
+    else toast(tr("app.updated"), { label: tr("app.reload"), run: () => location.reload() });
+  });
+  navigator.serviceWorker.startMessages?.(); // deliver a message that arrived before this script ran
+}
+bootFromSnapshot();
 onAuthStateChanged(auth, async user => {
-  me = user; unsubTrips?.(); trips = []; tripsLoaded = false;
-  if (!me) { render(); return; }
+  const keep = booting && user && user.uid === me?.uid; // the snapshot on screen belongs to this user
+  if (booting) { booting = false; document.documentElement.classList.remove("booting"); if (!keep) closeTrip(); }
+  me = user; unsubTrips?.();
+  if (!keep) { trips = []; tripsLoaded = false; }
+  if (!me) { clearSnapshot(); render(); return; }
   watchTrips();
   const j = location.hash.match(/^#join-([A-Za-z0-9]{6})$/), tm = location.hash.match(/^#trip-([a-z0-9]+)$/);
   if (j && me.isAnonymous && !guestName && !(await alreadyOnTrip(j[1]))) {
@@ -849,6 +897,6 @@ onAuthStateChanged(auth, async user => {
     ui.guestConfirm = j[1]; render();
   }
   else if (j) { try { await joinByCode(j[1]); } catch (e) { render(); toast(e.known ? e.message : tr("err.joinShort")); } }
-  else if (tm) openTrip(tm[1]);
+  else if (tm) openTrip(tm[1], keep);
   else render();
 });

@@ -30,4 +30,4 @@ Each expense is converted to the trip currency and split equally (to the cent) b
 
 Run `python3 tools/bump-version.py` before committing. It gives `style.css`, `app.js` and the other modules a new `?v=` number, so phones don't mix a fresh `app.js` with an old cached `i18n.js`.
 
-`sw.js` is an offline cache (service worker). The page is always loaded from the network first; files with a `?v=` number, fonts and the Firebase SDK come from the cache. That is why bumping the version matters: a file changed without a new `?v=` keeps being served from the cache.
+`sw.js` is an offline cache (service worker). The page is served from the cache and refreshed in the background (open pages switch to a new deploy right away during start-up, or offer a reload later); files with a `?v=` number, fonts and the Firebase SDK come from the cache. That is why bumping the version matters: a file changed without a new `?v=` keeps being served from the cache.
