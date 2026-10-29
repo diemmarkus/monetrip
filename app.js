@@ -3,11 +3,11 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signI
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, deleteField, FieldPath }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js?v=58";
-import { settle, balances } from "./settle.js?v=58";
-import { autoIcon, PICKS } from "./icons.js?v=58";
-import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=58";
-import { legalDoc } from "./legal.js?v=58";
+import { firebaseConfig } from "./firebase-config.js?v=59";
+import { settle, balances } from "./settle.js?v=59";
+import { autoIcon, PICKS } from "./icons.js?v=59";
+import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=59";
+import { legalDoc } from "./legal.js?v=59";
 
 const CURRENCIES = ["EUR","USD","GBP","CHF","CZK","HUF","PLN","TRY","SEK","NOK","DKK","JPY","CAD","AUD","THB"];
 const $ = (s, r = document) => r.querySelector(s);
@@ -572,8 +572,7 @@ function tripView() {
     h("div", { class: "top" }, tr("bal.title") ? h("h2", { text: tr("bal.title") }) : null,
       h("button", { class: "primary", disabled: !cur.expenses.length, onclick: async ev => {
         ev.target.disabled = true; const transfers = settle(bal);
-        try { await updateDoc(doc(db, "trips", t.id), { settlement: { at: Date.now(), by: mine, currency: ccy, count: cur.expenses.length, transfers }, paid: {} });
-          toast(transfers.length ? tr("bal.done", { n: transfers.length }) : tr("bal.alreadyEven")); }
+        try { await updateDoc(doc(db, "trips", t.id), { settlement: { at: Date.now(), by: mine, currency: ccy, count: cur.expenses.length, transfers }, paid: {} }); }
         catch { toast(tr("bal.saveFailed")); ev.target.disabled = false; }
       } }, s ? tr("bal.settleAgain") : tr("bal.settle"))),
     h("div", { class: "list" }, [...ids].sort((a, b) => memberName(t, a).localeCompare(memberName(t, b), locale(), { sensitivity: "base" })).map(id => {
