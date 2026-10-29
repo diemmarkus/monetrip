@@ -3,11 +3,11 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signI
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, deleteField, FieldPath }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js?v=62";
-import { settle, balances } from "./settle.js?v=62";
-import { autoIcon, PICKS } from "./icons.js?v=62";
-import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=62";
-import { legalDoc } from "./legal.js?v=62";
+import { firebaseConfig } from "./firebase-config.js?v=64";
+import { settle, balances } from "./settle.js?v=64";
+import { autoIcon, PICKS } from "./icons.js?v=64";
+import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=64";
+import { legalDoc } from "./legal.js?v=64";
 
 const CURRENCIES = ["EUR","USD","GBP","CHF","CZK","HUF","PLN","TRY","SEK","NOK","DKK","JPY","CAD","AUD","THB"];
 const $ = (s, r = document) => r.querySelector(s);
@@ -400,13 +400,31 @@ addEventListener("hashchange", () => {
   if (l === ui.legal) return;
   ui.legalFromApp = !!l; ui.legal = l; render(); if (l) scrollTo(0, 0);
 });
+async function alreadyOnTrip(code) {
+  try {
+    const c = await getDoc(doc(db, "codes", code.toUpperCase()));
+    return c.exists() && (await getDoc(doc(db, "trips", c.data().tripId))).exists(); // readable only for members
+  } catch { return false; }
+}
+function guestConfirmView() {
+  const name = firstName() || tr("auth.guest"), code = ui.guestConfirm;
+  return [brand(), h("div", { class: "panel" },
+    h("h2", { text: tr("guest.confirmTitle", { name }) }),
+    h("p", { class: "muted", text: tr("guest.confirmBody", { name }) }),
+    h("div", { class: "row" },
+      h("button", { class: "primary", onclick: async () => {
+        ui.guestConfirm = null; render();
+        try { await joinByCode(code); } catch (e) { render(); toast(e.known ? e.message : tr("err.joinShort")); }
+      } }, tr("guest.continueAs", { name })),
+      h("button", { onclick: () => { ui.guestConfirm = null; closeTrip(); signOut(auth); } }, tr("guest.someoneElse"))))];
+}
 function render() {
   const ae = document.activeElement?.id, saved = {}, sheetScroll = $("#sheet .xform")?.scrollTop || 0;
   // The expense form keeps its values across redraws only once someone has touched it;
   // an untouched form is rebuilt from fresh defaults (last split / payer, which depend on loaded expenses).
   const oldX = app.querySelector(".xform"), keepX = oldX?.dataset.dirty === "1";
   for (const el of app.querySelectorAll("input[id],select[id]")) if (keepX || !oldX?.contains(el)) saved[el.id] = el.type === "checkbox" ? el.checked : el.value;
-  app.replaceChildren(...(ui.legal ? legalView(ui.legal) : !me ? signInView() : cur.id ? tripView() : homeView()), legalFooter());
+  app.replaceChildren(...(ui.legal ? legalView(ui.legal) : !me ? signInView() : ui.guestConfirm ? guestConfirmView() : cur.id ? tripView() : homeView()), legalFooter());
   const sp = document.getElementById("splash");
   if (sp && !sp.classList.contains("done")) { sp.classList.add("done"); setTimeout(() => sp.remove(), 400); }
   for (const [id, v] of Object.entries(saved)) { const el = document.getElementById(id); if (!el) continue; if (el.type === "checkbox") el.checked = v; else el.value = v; }
@@ -808,7 +826,12 @@ onAuthStateChanged(auth, async user => {
   if (!me) { render(); return; }
   watchTrips();
   const j = location.hash.match(/^#join-([A-Za-z0-9]{6})$/), tm = location.hash.match(/^#trip-([a-z0-9]+)$/);
-  if (j) { try { await joinByCode(j[1]); } catch (e) { render(); toast(e.known ? e.message : tr("err.joinShort")); } }
+  if (j && me.isAnonymous && !guestName && !(await alreadyOnTrip(j[1]))) {
+    // A guest account remembered by this browser may belong to someone else (shared phone,
+    // private tabs). Ask before joining as them, so nobody ends up in another guest's trips.
+    ui.guestConfirm = j[1]; render();
+  }
+  else if (j) { try { await joinByCode(j[1]); } catch (e) { render(); toast(e.known ? e.message : tr("err.joinShort")); } }
   else if (tm) openTrip(tm[1]);
   else render();
 });
