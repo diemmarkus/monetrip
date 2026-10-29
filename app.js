@@ -213,7 +213,7 @@ const iconFor = (t, e) => e.icon || suggestIcon(t, e.desc);
 /* ---------- expense form helpers ---------- */
 function resetExpenseForm() {
   const f = app.querySelector(".xform"); if (!f) return;
-  f.reset(); f.xrate.value = ""; f.xicon.value = "";
+  f.reset(); f.xrate.value = ""; f.xicon.value = ""; delete f.dataset.dirty;
   ui.forOpen = false; f.querySelector("#forlist").hidden = true; f.querySelector("#forbtn").setAttribute("aria-expanded", "false");
   f._resync?.(); f._syncIcon?.();
 }
@@ -262,7 +262,7 @@ function startEdit(e) {
   f.xccy.value = e.currency; f.xrate.value = String(e.rate || 1).replace(".", ",");
   f.xpaid.value = e.paidBy; f.xdate.value = dayKey(e); f.xicon.value = e.icon || ""; f._syncIcon?.();
   for (const cb of f.querySelectorAll("input[name=xsplit]")) cb.checked = (e.split || []).includes(cb.value);
-  f._resync?.();
+  f.dataset.dirty = "1"; f._resync?.();
   openSheet();
 }
 
@@ -296,9 +296,13 @@ function brand() {
 }
 function render() {
   const ae = document.activeElement?.id, saved = {}, sheetScroll = $("#sheet .xform")?.scrollTop || 0;
-  for (const el of app.querySelectorAll("input[id],select[id]")) saved[el.id] = el.type === "checkbox" ? el.checked : el.value;
+  // The expense form keeps its values across redraws only once someone has touched it;
+  // an untouched form is rebuilt from fresh defaults (last split / payer, which depend on loaded expenses).
+  const oldX = app.querySelector(".xform"), keepX = oldX?.dataset.dirty === "1";
+  for (const el of app.querySelectorAll("input[id],select[id]")) if (keepX || !oldX?.contains(el)) saved[el.id] = el.type === "checkbox" ? el.checked : el.value;
   app.replaceChildren(...(!me ? signInView() : cur.id ? tripView() : homeView()));
   for (const [id, v] of Object.entries(saved)) { const el = document.getElementById(id); if (!el) continue; if (el.type === "checkbox") el.checked = v; else el.value = v; }
+  if (keepX) { const nx = app.querySelector(".xform"); if (nx) nx.dataset.dirty = "1"; }
   app.querySelector(".xform")?._resync?.();
   syncSheet();
   if (sheetScroll) { const sf = $("#sheet .xform"); if (sf) sf.scrollTop = sheetScroll; }
@@ -506,7 +510,7 @@ function tripView() {
   if (ui.editing && !editing && cur.expenses.length) ui.editing = null;
   const iconBtn = h("button", { type: "button", class: "icon-pick", "aria-label": "Choose an icon", "aria-expanded": "false",
     onclick: () => { picks.hidden = !picks.hidden; iconBtn.setAttribute("aria-expanded", String(!picks.hidden)); } });
-  const pick = ic => { form.xicon.value = ic; picks.hidden = true; iconBtn.setAttribute("aria-expanded", "false"); form._syncIcon(); };
+  const pick = ic => { form.xicon.value = ic; form.dataset.dirty = "1"; picks.hidden = true; iconBtn.setAttribute("aria-expanded", "false"); form._syncIcon(); };
   const firstEmoji = v => { for (const { segment } of new Intl.Segmenter().segment(v)) if (/\p{Extended_Pictographic}|\p{Regional_Indicator}/u.test(segment)) return segment; return ""; };
   const picks = h("div", { class: "picks", hidden: true, role: "group", "aria-label": "Icons" },
     h("input", { class: "emoji-in", placeholder: "Or type any emoji…", "aria-label": "Type an emoji", autocomplete: "off", enterkeyhint: "done",
@@ -514,7 +518,7 @@ function tripView() {
       onkeydown: e => { if (e.key === "Enter") e.preventDefault(); } }),
     PICKS.map(ic => h("button", { type: "button", onclick: () => pick(ic) }, ic)),
     h("button", { type: "button", class: "auto", onclick: () => pick("") }, "Auto"));
-  const form = h("form", { class: "panel xform", oninput: e => { if (e.target.id === "xrate") e.currentTarget.dataset.auto = ""; if (e.target.id === "xdesc") form._syncIcon(); if (e.target.name === "xsplit") form._syncFor(); preview(e.currentTarget); }, onsubmit: async e => {
+  const form = h("form", { class: "panel xform", oninput: e => { e.currentTarget.dataset.dirty = "1"; if (e.target.id === "xrate") e.currentTarget.dataset.auto = ""; if (e.target.id === "xdesc") form._syncIcon(); if (e.target.name === "xsplit") form._syncFor(); preview(e.currentTarget); }, onsubmit: async e => {
       e.preventDefault(); const f = e.target; xerr.hidden = true;
       const amount = parseNum(f.xamt.value), c = f.xccy.value, rate = c === ccy ? 1 : parseNum(f.xrate.value);
       const split = [...f.querySelectorAll("input[name=xsplit]:checked")].map(i => i.value);
