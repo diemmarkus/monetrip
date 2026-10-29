@@ -33,7 +33,7 @@ const RULES = [
   ["📶", "sim data esim internet wifi"],
 ];
 
-export const DEFAULT_ICON = "💸";
+export const DEFAULT_ICON = "💰";
 
 const TABLE = RULES.map(([icon, words]) => [icon, words.split(" ")]);
 
@@ -56,4 +56,4 @@ export function autoIcon(desc) {
 export const iconFor = e => e.icon || autoIcon(e.desc);
 
 // What the picker offers for manual override.
-export const PICKS = ["🍔", "🍕", "🥙", "🍣", "☕", "🍺", "🍷", "🍦", "🛒", "🏨", "⛺", "✈️", "🚆", "🚌", "🚕", "⛴️", "🚗", "⛽", "🅿️", "🎟️", "⛷️", "🏊", "🎉", "🛍️", "💊", "📶", "💶", "💸"];
+export const PICKS = ["🍔", "🍕", "🥙", "🍣", "☕", "🍺", "🍷", "🍦", "🛒", "🏨", "⛺", "✈️", "🚆", "🚌", "🚕", "⛴️", "🚗", "⛽", "🅿️", "🎟️", "⛷️", "🏊", "🎉", "🛍️", "💊", "📶", "💶", "💰"];
