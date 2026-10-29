@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut, signInAnonymously, updateProfile, linkWithPopup }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, deleteField, FieldPath }
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, deleteField, FieldPath }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 import { settle, balances } from "./settle.js";
@@ -15,10 +15,15 @@ const app = $("#app");
 
 const fbApp = initializeApp(firebaseConfig);
 const auth = getAuth(fbApp);
-const db = getFirestore(fbApp);
+// Keep a copy of trips and expenses on the device, so reopening the app shows them instantly
+// while it checks for updates in the background. Falls back to memory-only where storage is blocked.
+const db = (() => {
+  try { return initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) }); }
+  catch { return getFirestore(fbApp); }
+})();
 
 let me = null;            // Firebase user
-let trips = [], unsubTrips = null;
+let trips = [], unsubTrips = null, tripsLoaded = false;
 let cur = { id: null, trip: null, expenses: [], unsubs: [] };
 let ui = { joinPick: false };
 const legalHash = () => (location.hash.match(/^#(imprint|privacy)$/) || [])[1] || null;
@@ -87,8 +92,10 @@ const memberName = (trip, id) => trip.members?.[id]?.name || tr("someone");
 
 function watchTrips() {
   unsubTrips?.();
-  unsubTrips = onSnapshot(query(collection(db, "trips"), where("memberUids", "array-contains", me.uid)), s => {
+  unsubTrips = onSnapshot(query(collection(db, "trips"), where("memberUids", "array-contains", me.uid)), { includeMetadataChanges: true }, s => {
     trips = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    // An empty answer from the device cache may just mean "not synced yet", so wait for the server before saying "no trips".
+    if (trips.length || !s.metadata?.fromCache) tripsLoaded = true;
     if (!cur.id) render();
   }, () => toast(tr("err.loadTrips")));
 }
@@ -441,7 +448,7 @@ function homeView() {
         h("span", {}, h("strong", { text: t.name }), h("br"), h("span", { class: "muted", text: `${tr("people", { n })} · ${t.localCurrency && t.localCurrency !== t.currency ? t.localCurrency + " → " : ""}${t.currency}${t.settlement ? tr("home.settled") : ""}` })),
         h("span", { class: "code", text: t.code }));
     }))
-    : h("div", { class: "empty", text: tr("home.empty") });
+    : h("div", { class: "empty", text: tripsLoaded ? tr("home.empty") : tr("loading") });
   const guestNote = h("div", { class: "panel" },
     h("h2", { text: tr("signin.startOwn") }),
     h("p", { class: "muted", text: tr("home.guestNote") }),
@@ -739,7 +746,7 @@ function tripView() {
 /* ---------- boot ---------- */
 loadRates().then(() => { if (me && cur.trip) render(); });
 onAuthStateChanged(auth, async user => {
-  me = user; unsubTrips?.(); trips = [];
+  me = user; unsubTrips?.(); trips = []; tripsLoaded = false;
   if (!me) { render(); return; }
   watchTrips();
   const j = location.hash.match(/^#join-([A-Za-z0-9]{6})$/), tm = location.hash.match(/^#trip-([a-z0-9]+)$/);
