@@ -3,11 +3,11 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signI
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, deleteField, FieldPath }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js?v=53";
-import { settle, balances } from "./settle.js?v=53";
-import { autoIcon, PICKS } from "./icons.js?v=53";
-import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=53";
-import { legalDoc } from "./legal.js?v=53";
+import { firebaseConfig } from "./firebase-config.js?v=54";
+import { settle, balances } from "./settle.js?v=54";
+import { autoIcon, PICKS } from "./icons.js?v=54";
+import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=54";
+import { legalDoc } from "./legal.js?v=54";
 
 const CURRENCIES = ["EUR","USD","GBP","CHF","CZK","HUF","PLN","TRY","SEK","NOK","DKK","JPY","CAD","AUD","THB"];
 const $ = (s, r = document) => r.querySelector(s);
@@ -648,8 +648,12 @@ function tripView() {
       catch { xerr.hidden = false; xerr.textContent = tr("x.saveFailed"); toast(tr("x.saveFailed")); }
       btn.disabled = false;
     } },
-    h("div", { class: "top sheet-head" }, h("h2", { id: "sheettitle", text: editing ? tr("x.editTitle") : tr("x.addTitle") }),
-      h("button", { type: "button", class: "icon-btn close-btn", "aria-label": tr("close"), onclick: closeSheet }, "✕")),
+    // Close, title and the save button live in the pinned header, so saving is always on screen (even above the keyboard).
+    h("div", { class: "sheet-head" },
+      h("button", { type: "button", class: "icon-btn close-btn", "aria-label": tr("close"), onclick: closeSheet }, "✕"),
+      h("h2", { id: "sheettitle", text: editing ? tr("x.editTitle") : tr("x.addTitle") }),
+      h("button", { class: "primary head-save", type: "submit" }, editing ? tr("x.saveShort") : tr("x.addShort"))),
+    xerr,
     h("div", { class: "field" }, h("label", { for: "xdesc", text: tr("x.whatFor") }),
       h("div", { class: "desc-row" }, iconBtn, h("input", { id: "xdesc", name: "xdesc", placeholder: tr("x.descPh"), maxlength: 80, autocomplete: "off" }),
         h("input", { type: "hidden", id: "xicon", name: "xicon", value: "" })),
@@ -669,12 +673,7 @@ function tripView() {
         h("span", { id: "forsum" }), h("span", { class: "chev", "aria-hidden": "true" })),
       h("div", { class: "checks", id: "forlist", role: "group", "aria-label": tr("x.splitBetween"), hidden: !ui.forOpen },
         byName.map(id => h("label", {}, h("input", { type: "checkbox", name: "xsplit", value: id, checked: defaultSplit.has(id), id: "xs-" + id }), memberName(t, id))))),
-    xerr,
-    editing
-      ? h("div", { class: "pair" },
-          h("button", { type: "button", onclick: closeSheet }, tr("cancel")),
-          h("button", { class: "primary", type: "submit" }, tr("x.saveChanges")))
-      : h("button", { class: "primary", type: "submit" }, tr("x.add")));
+  );
   if (editing) form.classList.add("editing");
   form._syncIcon = () => {
     const own = form.xicon.value;

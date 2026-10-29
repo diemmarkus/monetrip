@@ -95,7 +95,7 @@ const DICT = {
     "x.editTitle": "Edit expense", "x.addTitle": "Add an expense",
     "x.whatFor": "What for", "x.descPh": "Dinner, taxi, hotel…", "x.amount": "Amount", "x.currency": "Currency",
     "x.paidBy": "Paid by", "x.date": "Date", "x.for": "For", "x.splitBetween": "Split equally between",
-    "x.saveChanges": "Save changes", "x.add": "Add expense",
+    "x.saveChanges": "Save changes", "x.add": "Add expense", "x.addShort": "Add", "x.saveShort": "Save",
     "x.nobody": "Nobody yet", "x.everyone": "Everyone ({n})", "x.justYou": "Just you",
 
     "list.title": "Expenses",
@@ -213,7 +213,7 @@ const DICT = {
     "x.editTitle": "Ausgabe bearbeiten", "x.addTitle": "Neue Ausgabe",
     "x.whatFor": "Wofür?", "x.descPh": "Abendessen, Taxi, Hotel…", "x.amount": "Betrag", "x.currency": "Währung",
     "x.paidBy": "Wer hat bezahlt?", "x.date": "Wann?", "x.for": "Für wen?", "x.splitBetween": "Gleichmäßig aufteilen auf",
-    "x.saveChanges": "Speichern", "x.add": "Eintragen",
+    "x.saveChanges": "Speichern", "x.add": "Eintragen", "x.addShort": "Eintragen", "x.saveShort": "Speichern",
     "x.nobody": "Noch niemand", "x.everyone": "Alle ({n})", "x.justYou": "Nur du",
 
     "list.title": "Ausgaben",

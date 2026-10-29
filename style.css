@@ -268,3 +268,9 @@ button.ghost.lang{font-family:var(--mono);font-size:12px;letter-spacing:.06em;pa
 .seg{display:flex}
 .seg button{flex:1 1 0;min-width:0;padding:6px 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .seg button[aria-checked="true"]{background:var(--accent-soft);color:var(--accent-text);font-weight:600;box-shadow:none}
+/* Sheet header: close · title · save */
+.sheet-head{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px}
+.sheet-head h2{min-width:0;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sheet-head .close-btn{margin-left:-8px}
+.xform.sheet .sheet-head .head-save{min-height:38px;padding:6px 16px;border-radius:999px}
+.xform.sheet .sheet-head{padding-bottom:8px;border-bottom:1px solid var(--line)}
