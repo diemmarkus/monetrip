@@ -3,11 +3,11 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signI
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, deleteField, FieldPath }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js?v=52";
-import { settle, balances } from "./settle.js?v=52";
-import { autoIcon, PICKS } from "./icons.js?v=52";
-import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=52";
-import { legalDoc } from "./legal.js?v=52";
+import { firebaseConfig } from "./firebase-config.js?v=53";
+import { settle, balances } from "./settle.js?v=53";
+import { autoIcon, PICKS } from "./icons.js?v=53";
+import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=53";
+import { legalDoc } from "./legal.js?v=53";
 
 const CURRENCIES = ["EUR","USD","GBP","CHF","CZK","HUF","PLN","TRY","SEK","NOK","DKK","JPY","CAD","AUD","THB"];
 const $ = (s, r = document) => r.querySelector(s);
@@ -327,10 +327,11 @@ function applyTheme(v) {
 }
 function setTheme(v) { try { v === "system" ? localStorage.removeItem("mt-theme") : localStorage.setItem("mt-theme", v); } catch {} applyTheme(v); }
 function themePicker() {
-  const cur = getTheme();
+  // Until you pick one, the phone's own setting decides; the switch shows which one is in use.
+  const chosen = getTheme(), cur = chosen === "system" ? (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light") : chosen;
   return h("div", { class: "menu-row" }, h("span", { class: "menu-lbl", id: "themelbl", text: tr("theme.label") }),
     h("div", { class: "seg", role: "radiogroup", "aria-labelledby": "themelbl" },
-      ["system", "light", "dark"].map(v => h("button", { type: "button", role: "radio", "aria-checked": String(cur === v),
+      ["light", "dark"].map(v => h("button", { type: "button", role: "radio", "aria-checked": String(cur === v),
         onclick: ev => { setTheme(v); for (const b of ev.currentTarget.parentNode.children) b.setAttribute("aria-checked", String(b === ev.currentTarget)); } }, tr("theme." + v)))));
 }
 applyTheme(getTheme());
