@@ -25,3 +25,7 @@ Split trip expenses with friends. Create a trip, invite people with a link, log 
 ## How settling works
 
 Each expense is converted to the trip currency and split equally (to the cent) between the chosen people. Balances are then partitioned into the largest number of groups that sum to zero; a group of *k* people needs *k − 1* transfers, so this gives the minimum number of transfers overall. It is exact for up to 18 people with a non-zero balance and falls back to a greedy match beyond that.
+
+## Deploying changes
+
+Run `python3 tools/bump-version.py` before committing. It gives `style.css`, `app.js` and the other modules a new `?v=` number, so phones don't mix a fresh `app.js` with an old cached `i18n.js`.

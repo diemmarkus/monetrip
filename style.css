@@ -262,3 +262,9 @@ button.ghost.lang{font-family:var(--mono);font-size:12px;letter-spacing:.06em;pa
 .xform.sheet #forlist{padding-top:4px}
 .xform.sheet .checks label{padding:3px 10px}
 .xform.sheet>button[type=submit],.xform.sheet .pair>button{min-height:44px;margin-top:2px}
+/* Theme row: label above a full-width switch so it fits narrow phones */
+.menu{width:min(300px,calc(100vw - 32px))}
+.menu-row{flex-direction:column;align-items:stretch;gap:6px;padding:8px 12px}
+.seg{display:flex}
+.seg button{flex:1 1 0;min-width:0;padding:6px 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.seg button[aria-checked="true"]{background:var(--accent-soft);color:var(--accent-text);font-weight:600;box-shadow:none}
