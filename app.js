@@ -3,11 +3,11 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signI
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, deleteField, FieldPath }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js?v=56";
-import { settle, balances } from "./settle.js?v=56";
-import { autoIcon, PICKS } from "./icons.js?v=56";
-import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=56";
-import { legalDoc } from "./legal.js?v=56";
+import { firebaseConfig } from "./firebase-config.js?v=58";
+import { settle, balances } from "./settle.js?v=58";
+import { autoIcon, PICKS } from "./icons.js?v=58";
+import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=58";
+import { legalDoc } from "./legal.js?v=58";
 
 const CURRENCIES = ["EUR","USD","GBP","CHF","CZK","HUF","PLN","TRY","SEK","NOK","DKK","JPY","CAD","AUD","THB"];
 const $ = (s, r = document) => r.querySelector(s);
@@ -735,22 +735,32 @@ function tripView() {
     })) : h("div", { class: "empty", text: tr("list.empty") })));
 
   /* people & invite */
-  const gform = h("form", { class: "row", onsubmit: async e => { e.preventDefault(); const n = e.target.gname.value.trim(); if (!n) return; await addMember(n, false); e.target.reset(); toast(tr("ppl.added", { name: n })); } },
-    h("label", { class: "grow" }, tr("ppl.addLabel"), h("input", { id: "gname", name: "gname", placeholder: tr("ppl.namePh"), maxlength: 30 })), h("button", { type: "submit" }, tr("add")));
+  const ICON_COPY = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>';
+  const ICON_SHARE = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>';
+  const linkBtn = (svg, label, onclick, cls = "") => { const b = h("button", { type: "button", class: "link-icon " + cls, title: label, "aria-label": label, onclick }); b.innerHTML = svg; return b; };
+  const addForm = ui.addPerson ? h("form", { class: "add-person", onsubmit: async e => {
+      e.preventDefault(); const n = e.target.gname.value.trim(); if (!n) return;
+      await addMember(n, false); ui.addPerson = false; render(); toast(tr("ppl.added", { name: n }));
+    } },
+    h("input", { id: "gname", name: "gname", placeholder: tr("ppl.namePh"), "aria-label": tr("ppl.addLabel"), maxlength: 30, autocomplete: "off",
+      onkeydown: e => { if (e.key === "Escape") { e.stopPropagation(); ui.addPerson = false; render(); } } }),
+    h("button", { class: "primary", type: "submit" }, tr("add"))) : null;
   const link = inviteLink(t.code);
-  out.push(h("div", { class: "panel" }, h("h2", { text: tr("ppl.title") }),
+  out.push(h("div", { class: "panel" },
+    h("div", { class: "top" }, h("h2", { text: tr("ppl.title") }),
+      h("button", { type: "button", class: "add-round", title: tr("ppl.addLabel"), "aria-label": tr("ppl.addLabel"), "aria-expanded": String(!!ui.addPerson),
+        onclick: () => { ui.addPerson = !ui.addPerson; render(); if (ui.addPerson) document.getElementById("gname")?.focus(); } }, h("span", { "aria-hidden": "true", text: "+" }))),
+    addForm,
     h("div", { class: "chips" }, ids.map(id => h("span", { class: "chip" + (id === mine ? " you" : "") }, memberName(t, id), !t.members[id].uid ? h("small", { text: tr("ppl.notJoined") }) : null))),
     h("div", {}, h("h3", { text: tr("ppl.invite"), style: "margin-bottom:6px" }),
       h("div", { class: "linkbox" },
         h("input", { id: "invlink", readonly: true, value: link, "aria-label": tr("ppl.inviteLink"), onfocus: e => e.target.select() }),
-        h("button", { type: "button", onclick: async () => {
+        linkBtn(ICON_COPY, tr("copy"), async () => {
           try { await navigator.clipboard.writeText(link); toast(tr("ppl.copied")); }
           catch { const i = document.getElementById("invlink"); i.focus(); i.select(); toast(tr("ppl.holdToCopy")); }
-        } }, tr("copy"))),
-      navigator.share ? h("button", { class: "primary", style: "margin-top:10px", onclick: async () => {
-          try { await navigator.share({ url: link }); } catch {}
-        } }, tr("share")) : null),
-    gform, ui.joinPick ? whoPicker() : h("button", { class: "ghost", style: "align-self:flex-start", onclick: () => {
+        }),
+        navigator.share ? linkBtn(ICON_SHARE, tr("share"), async () => { try { await navigator.share({ url: link }); } catch {} }, "share") : null)),
+    ui.joinPick ? whoPicker() : h("button", { class: "ghost", style: "align-self:flex-start", onclick: () => {
       ui.joinPick = true; render();
       const w = $("#whopick"); w?.scrollIntoView({ block: "nearest", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
       w?.querySelector("button")?.focus({ preventScroll: true });
