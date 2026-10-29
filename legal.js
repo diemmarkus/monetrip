@@ -1,12 +1,12 @@
 // Imprint (Impressum) and privacy policy, in English and German.
-// ⚠️ Fill in OPERATOR before publishing. This is a template, not legal advice.
+// Operator details below. This is a template, not legal advice.
 
 export const OPERATOR = {
-  name: "[Full name]",
-  street: "[Street and number]",
-  city: "[Postcode and city]",
+  name: "Markus Diem",
+  street: "Leitgebgasse 7/25",
+  city: "1050 Wien",
   country: "AT",          // "AT" (Austria) or "DE" (Germany): picks the legal references below
-  email: "[Contact email]",
+  email: "diemmarkus@gmail.com",
   firestoreRegion: "europe-west3 (Frankfurt)",
 };
 
