@@ -541,7 +541,7 @@ function tripView() {
   /* balances */
   const maxAbs = Math.max(1, ...ids.map(id => Math.abs(bal[id])));
   out.push(h("div", { class: "panel" },
-    h("div", { class: "top" }, h("h2", { text: tr("bal.title") }),
+    h("div", { class: "top" }, tr("bal.title") ? h("h2", { text: tr("bal.title") }) : null,
       h("button", { class: "primary", disabled: !cur.expenses.length, onclick: async ev => {
         ev.target.disabled = true; const transfers = settle(bal);
         try { await updateDoc(doc(db, "trips", t.id), { settlement: { at: Date.now(), by: mine, currency: ccy, count: cur.expenses.length, transfers }, paid: {} });
