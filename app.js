@@ -3,11 +3,11 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signI
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, deleteField, FieldPath }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js?v=60";
-import { settle, balances } from "./settle.js?v=60";
-import { autoIcon, PICKS } from "./icons.js?v=60";
-import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=60";
-import { legalDoc } from "./legal.js?v=60";
+import { firebaseConfig } from "./firebase-config.js?v=62";
+import { settle, balances } from "./settle.js?v=62";
+import { autoIcon, PICKS } from "./icons.js?v=62";
+import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=62";
+import { legalDoc } from "./legal.js?v=62";
 
 const CURRENCIES = ["EUR","USD","GBP","CHF","CZK","HUF","PLN","TRY","SEK","NOK","DKK","JPY","CAD","AUD","THB"];
 const $ = (s, r = document) => r.querySelector(s);
@@ -143,7 +143,14 @@ async function claimMember(mid) {
   if (prev && prev !== mid) upd[`members.${prev}.uid`] = null; // switching person: free the old spot
   await updateDoc(doc(db, "trips", cur.trip.id), upd); ui.joinPick = false; render();
 }
+// Names must be unique within a trip ("anna" and " Anna " count as the same).
+const normName = n => (n || "").normalize("NFC").trim().replace(/\s+/g, " ").toLocaleLowerCase();
+const memberWithName = (t, name) => Object.keys(t?.members || {}).find(id => normName(t.members[id].name) === normName(name));
+function nameTakenError(name) { return Object.assign(new Error(tr("ppl.nameTaken", { name: name.trim() })), { known: true }); }
 async function addMember(name, withMe) {
+  name = name.trim().replace(/\s+/g, " ");
+  const clash = memberWithName(cur.trip, name);
+  if (clash) throw nameTakenError(cur.trip.members[clash].name);
   const mid = rid(8);
   const prev = withMe ? myMemberId(cur.trip) : null, upd = { [`members.${mid}`]: { name, uid: withMe ? me.uid : null } };
   if (prev) upd[`members.${prev}.uid`] = null;
@@ -521,14 +528,22 @@ function tripView() {
 
   if (!mine && guestName && !cur.autoJoined) {
     cur.autoJoined = true; const n = guestName;
-    const match = ids.find(id => !t.members[id].uid && t.members[id].name.trim().toLowerCase() === n.toLowerCase());
-    (match ? claimMember(match) : addMember(n, true)).then(() => toast(tr("trip.welcome", { name: n }))).catch(() => { cur.autoJoined = false; toast(tr("trip.addFailed")); });
-    return [...out, h("div", { class: "panel" }, h("p", { class: "muted", text: tr("trip.adding") }))];
+    const same = memberWithName(t, n);
+    if (same && t.members[same].uid) {
+      // Someone on the trip already uses this name: let the guest pick a spot or another name.
+      toast(tr("ppl.nameTaken", { name: t.members[same].name }));
+    } else {
+      (same ? claimMember(same) : addMember(n, true)).then(() => toast(tr("trip.welcome", { name: n }))).catch(() => { cur.autoJoined = false; toast(tr("trip.addFailed")); });
+      return [...out, h("div", { class: "panel" }, h("p", { class: "muted", text: tr("trip.adding") }))];
+    }
   }
   // "Which one are you?": at the top for someone not on the trip yet; inside People when switching.
   const whoPicker = () => {
     const free = ids.filter(id => !t.members[id].uid).sort((a, b) => memberName(t, a).localeCompare(memberName(t, b), locale(), { sensitivity: "base" }));
-    const nf = h("form", { class: "row", onsubmit: async e => { e.preventDefault(); const n = e.target.jn.value.trim(); if (n) await addMember(n, true); } },
+    const nf = h("form", { class: "row", onsubmit: async e => {
+        e.preventDefault(); const n = e.target.jn.value.trim(); if (!n) return;
+        try { await addMember(n, true); } catch (x) { toast(x.known ? x.message : tr("trip.addFailed")); e.target.jn.select(); }
+      } },
       h("label", { class: "grow" }, tr("trip.joinNew"), h("input", { id: "jn", name: "jn", value: mine ? "" : firstName(), required: true, maxlength: 30 })),
       h("button", { class: "primary", type: "submit" }, tr("trip.join")));
     return h("div", { class: mine ? "switcher" : "panel", id: "whopick" }, mine ? h("h3", { text: tr("trip.whoAreYou") }) : h("h2", { text: tr("trip.whoAreYou") }),
@@ -739,7 +754,8 @@ function tripView() {
   const linkBtn = (svg, label, onclick, cls = "") => { const b = h("button", { type: "button", class: "link-icon " + cls, title: label, "aria-label": label, onclick }); b.innerHTML = svg; return b; };
   const addForm = ui.addPerson ? h("form", { class: "add-person", onsubmit: async e => {
       e.preventDefault(); const n = e.target.gname.value.trim(); if (!n) return;
-      await addMember(n, false); ui.addPerson = false; render(); toast(tr("ppl.added", { name: n }));
+      try { await addMember(n, false); } catch (x) { toast(x.known ? x.message : tr("trip.addFailed")); e.target.gname.select(); return; }
+      ui.addPerson = false; render(); toast(tr("ppl.added", { name: n }));
     } },
     h("input", { id: "gname", name: "gname", placeholder: tr("ppl.namePh"), "aria-label": tr("ppl.addLabel"), maxlength: 30, autocomplete: "off",
       onkeydown: e => { if (e.key === "Escape") { e.stopPropagation(); ui.addPerson = false; render(); } } }),
