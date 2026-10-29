@@ -3,11 +3,11 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signI
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, deleteField, FieldPath }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js?v=59";
-import { settle, balances } from "./settle.js?v=59";
-import { autoIcon, PICKS } from "./icons.js?v=59";
-import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=59";
-import { legalDoc } from "./legal.js?v=59";
+import { firebaseConfig } from "./firebase-config.js?v=60";
+import { settle, balances } from "./settle.js?v=60";
+import { autoIcon, PICKS } from "./icons.js?v=60";
+import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=60";
+import { legalDoc } from "./legal.js?v=60";
 
 const CURRENCIES = ["EUR","USD","GBP","CHF","CZK","HUF","PLN","TRY","SEK","NOK","DKK","JPY","CAD","AUD","THB"];
 const $ = (s, r = document) => r.querySelector(s);
@@ -527,7 +527,7 @@ function tripView() {
   }
   // "Which one are you?": at the top for someone not on the trip yet; inside People when switching.
   const whoPicker = () => {
-    const free = ids.filter(id => !t.members[id].uid);
+    const free = ids.filter(id => !t.members[id].uid).sort((a, b) => memberName(t, a).localeCompare(memberName(t, b), locale(), { sensitivity: "base" }));
     const nf = h("form", { class: "row", onsubmit: async e => { e.preventDefault(); const n = e.target.jn.value.trim(); if (n) await addMember(n, true); } },
       h("label", { class: "grow" }, tr("trip.joinNew"), h("input", { id: "jn", name: "jn", value: mine ? "" : firstName(), required: true, maxlength: 30 })),
       h("button", { class: "primary", type: "submit" }, tr("trip.join")));
@@ -750,7 +750,7 @@ function tripView() {
       h("button", { type: "button", class: "add-round", title: tr("ppl.addLabel"), "aria-label": tr("ppl.addLabel"), "aria-expanded": String(!!ui.addPerson),
         onclick: () => { ui.addPerson = !ui.addPerson; render(); if (ui.addPerson) document.getElementById("gname")?.focus(); } }, h("span", { "aria-hidden": "true", text: "+" }))),
     addForm,
-    h("div", { class: "chips" }, ids.map(id => h("span", { class: "chip" + (id === mine ? " you" : "") }, memberName(t, id), !t.members[id].uid ? h("small", { text: tr("ppl.notJoined") }) : null))),
+    h("div", { class: "chips" }, byName.map(id => h("span", { class: "chip" + (id === mine ? " you" : "") }, memberName(t, id), !t.members[id].uid ? h("small", { text: tr("ppl.notJoined") }) : null))),
     h("div", {}, h("h3", { text: tr("ppl.invite"), style: "margin-bottom:6px" }),
       h("div", { class: "linkbox" },
         h("input", { id: "invlink", readonly: true, value: link, "aria-label": tr("ppl.inviteLink"), onfocus: e => e.target.select() }),
