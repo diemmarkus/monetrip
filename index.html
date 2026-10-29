@@ -11,7 +11,9 @@
 <meta property="og:title" content="Join my trip on MoneTrip">
 <meta property="og:description" content="Freunde &amp; Moneten. Add what you paid, and MoneTrip works out who pays whom.">
 <meta property="og:url" content="https://diemmarkus.github.io/monetrip/">
-<meta property="og:image" content="https://diemmarkus.github.io/monetrip/og-image.png?v=3">
+<meta property="og:image" content="https://diemmarkus.github.io/monetrip/og-image.png?v=4">
+<meta property="og:image:secure_url" content="https://diemmarkus.github.io/monetrip/og-image.png?v=4">
+<meta property="og:image:type" content="image/png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="MoneTrip – split trip costs and settle up with the fewest transfers">
@@ -21,7 +23,7 @@
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
 <link rel="icon" href="monetrip-icon.svg" type="image/svg+xml">
-<link rel="modulepreload" href="app.js?v=54">
+<link rel="modulepreload" href="app.js?v=55">
 <link rel="modulepreload" href="firebase-config.js?v=54">
 <link rel="modulepreload" href="settle.js?v=54">
 <link rel="modulepreload" href="icons.js?v=54">
@@ -34,15 +36,28 @@
 <link rel="preconnect" href="https://securetoken.googleapis.com">
 <link rel="preconnect" href="https://identitytoolkit.googleapis.com">
 <link rel="preload" href="fonts/figtree.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=54">
+<link rel="preload" href="fonts/plus-jakarta-sans.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="style.css?v=55">
 <script>try{var t=localStorage.getItem("mt-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
 <style>html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}</style>
 </head>
 <body>
-<div class="wrap" id="app">
-  <div class="panel"><p class="muted">Loading…</p></div>
+<div id="splash" role="status" aria-label="Loading MoneTrip">
+  <svg class="sp-mark" viewBox="26 12 68 102" aria-hidden="true">
+    <ellipse class="sp-shadow" cx="60" cy="111" rx="14" ry="2.5"/>
+    <g class="sp-bob">
+      <path d="M60 108 C60 108 28 76 28 50 A32 32 0 0 1 92 50 C92 76 60 108 60 108 Z M39 50 A21 21 0 1 0 81 50 A21 21 0 1 0 39 50" fill="currentColor" fill-rule="evenodd"/>
+      <g class="sp-coin" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(60 50) scale(0.9) translate(-60 -50)"><path d="M69.66 40.9 C67.24 38.1 64.03 37.4 60 37.4 C54.37 37.4 50.34 39.92 50.34 43.7 C50.34 47.9 55.17 49.02 60 50 C64.83 50.98 69.66 52.1 69.66 56.3 C69.66 60.08 65.64 62.6 60 62.6 C55.98 62.6 52.76 61.9 50.34 59.1" stroke-width="7"/><path d="M56.2 24.4 V75.6 M63.8 24.4 V75.6" stroke-width="4.5"/></g></g>
+    </g>
+  </svg>
+  <div class="sp-name">MoneTrip</div>
+  <div class="sp-tag">Freunde &amp; Moneten</div>
+  <div class="sp-dots" aria-hidden="true"><i></i><i></i><i></i></div>
+  <p class="sp-slow" hidden></p>
 </div>
+<script>setTimeout(function(){var s=document.getElementById("splash");if(!s||s.classList.contains("done"))return;var p=s.querySelector(".sp-slow");p.textContent=/^de/i.test(navigator.language||"")?"Dauert länger als sonst – prüf deine Verbindung.":"Taking longer than usual – check your connection.";p.hidden=false},8000)</script>
+<div class="wrap" id="app"></div>
 <div class="toast" id="toast" hidden></div>
-<script type="module" src="app.js?v=54"></script>
+<script type="module" src="app.js?v=55"></script>
 </body>
 </html>

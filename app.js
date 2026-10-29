@@ -400,6 +400,8 @@ function render() {
   const oldX = app.querySelector(".xform"), keepX = oldX?.dataset.dirty === "1";
   for (const el of app.querySelectorAll("input[id],select[id]")) if (keepX || !oldX?.contains(el)) saved[el.id] = el.type === "checkbox" ? el.checked : el.value;
   app.replaceChildren(...(ui.legal ? legalView(ui.legal) : !me ? signInView() : cur.id ? tripView() : homeView()), legalFooter());
+  const sp = document.getElementById("splash");
+  if (sp && !sp.classList.contains("done")) { sp.classList.add("done"); setTimeout(() => sp.remove(), 400); }
   for (const [id, v] of Object.entries(saved)) { const el = document.getElementById(id); if (!el) continue; if (el.type === "checkbox") el.checked = v; else el.value = v; }
   if (keepX) { const nx = app.querySelector(".xform"); if (nx) nx.dataset.dirty = "1"; }
   app.querySelector(".xform")?._resync?.();
