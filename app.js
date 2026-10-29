@@ -295,21 +295,49 @@ function langToggle() {
   return h("button", { class: "ghost lang", lang: other, title: tr("lang.switchTitle"), "aria-label": tr("lang.switchTitle"),
     onclick: () => { setLang(other); render(); } }, tr("lang.switch"));
 }
+function initials(name) {
+  const parts = (name || "").trim().split(/\s+/).filter(Boolean);
+  return ((parts[0]?.[0] || "") + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase() || "?";
+}
+function avatar(size) {
+  const guest = me?.isAnonymous, name = guest ? firstName() : (me?.displayName || me?.email || "");
+  if (me?.photoURL && !guest) return h("img", { class: "avatar", src: me.photoURL, alt: "", width: size, height: size, referrerpolicy: "no-referrer" });
+  return h("span", { class: "avatar" + (guest ? " guest" : ""), "aria-hidden": "true", text: initials(name) });
+}
+function closeMenu() { if (!ui.menuOpen) return; ui.menuOpen = false; const m = $("#acctmenu"); if (m) m.hidden = true; $("#acctbtn")?.setAttribute("aria-expanded", "false"); }
+document.addEventListener("click", e => { if (ui.menuOpen && !e.target.closest?.(".acct")) closeMenu(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && ui.menuOpen) { closeMenu(); $("#acctbtn")?.focus(); } });
 function brand() {
   const guest = me?.isAnonymous;
-  const out = h("button", { class: "ghost", onclick: ev => {
-    const b = ev.currentTarget;
-    if (guest && !b.dataset.sure) { b.dataset.sure = "1"; b.textContent = tr("auth.signOutSure"); setTimeout(() => { if (b.isConnected) { delete b.dataset.sure; b.textContent = tr("auth.signOut"); } }, 4000); return; }
-    closeTrip(); signOut(auth);
-  } }, tr("auth.signOut"));
+  const other = lang === "de" ? "en" : "de";
+  let right;
+  if (!me) right = h("span", { class: "who" }, langToggle());
+  else {
+    const signOutBtn = h("button", { class: "menu-item", role: "menuitem", onclick: ev => {
+      const b = ev.currentTarget;
+      if (guest && !b.dataset.sure) { b.dataset.sure = "1"; b.textContent = tr("auth.signOutSure"); b.classList.add("danger-text"); return; }
+      closeMenu(); closeTrip(); signOut(auth);
+    } }, tr("auth.signOut"));
+    const menu = h("div", { class: "menu", id: "acctmenu", role: "menu", hidden: !ui.menuOpen },
+      h("div", { class: "menu-head" }, avatar(40),
+        h("div", { class: "menu-who" },
+          h("b", { text: guest ? (firstName() || tr("auth.guest")) : (me.displayName || "") }),
+          h("span", { text: guest ? tr("auth.guest") : (me.email || "") }))),
+      guest ? h("button", { class: "menu-item strong", role: "menuitem", onclick: () => { closeMenu(); saveWithGoogle(); } }, tr("auth.signInGoogle")) : null,
+      h("button", { class: "menu-item", role: "menuitem", lang: other, onclick: () => { setLang(other); render(); } }, other === "de" ? "Deutsch" : "English"),
+      signOutBtn);
+    right = h("div", { class: "acct" },
+      h("button", { class: "avatar-btn", id: "acctbtn", "aria-haspopup": "menu", "aria-controls": "acctmenu", "aria-expanded": String(!!ui.menuOpen),
+        "aria-label": guest ? `${firstName() || tr("auth.guest")} (${tr("auth.guest")})` : (me.displayName || me.email || "Account"),
+        onclick: () => { ui.menuOpen = !ui.menuOpen; menu.hidden = !ui.menuOpen; $("#acctbtn").setAttribute("aria-expanded", String(ui.menuOpen)); } },
+        avatar(36)),
+      menu);
+  }
   return h("div", { class: "brand" }, h("div", { class: "top" },
     h("div", { class: "id" }, h("span", { class: "logo", "aria-hidden": "true" }),
       h("div", { class: "words" }, h("span", { class: "name", text: "MoneTrip" }),
         h("span", { class: "tag", text: tr("brand.tag") }))),
-    me ? h("span", { class: "who" }, me.photoURL ? h("img", { src: me.photoURL, alt: "" }) : null,
-      h("span", { text: guest ? (firstName() || tr("auth.guest")) + tr("auth.guestSuffix") : (me.displayName || me.email || "") }),
-      guest ? h("button", { class: "ghost", style: "color:var(--accent-text)", onclick: saveWithGoogle }, tr("auth.saveWithGoogle")) : null, out, langToggle())
-      : h("span", { class: "who" }, langToggle())));
+    right));
 }
 
 /* ---------- imprint & privacy ---------- */
