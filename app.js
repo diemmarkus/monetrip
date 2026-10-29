@@ -6,6 +6,8 @@ import { getFirestore, doc, collection, query, where, onSnapshot, getDoc, setDoc
 import { firebaseConfig } from "./firebase-config.js";
 import { settle, balances } from "./settle.js";
 import { autoIcon, PICKS } from "./icons.js";
+import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js";
+import { legalDoc } from "./legal.js";
 
 const CURRENCIES = ["EUR","USD","GBP","CHF","CZK","HUF","PLN","TRY","SEK","NOK","DKK","JPY","CAD","AUD","THB"];
 const $ = (s, r = document) => r.querySelector(s);
@@ -19,6 +21,8 @@ let me = null;            // Firebase user
 let trips = [], unsubTrips = null;
 let cur = { id: null, trip: null, expenses: [], unsubs: [] };
 let ui = { joinPick: false };
+const legalHash = () => (location.hash.match(/^#(imprint|privacy)$/) || [])[1] || null;
+ui.legal = legalHash();
 let guestName = null;   // first name typed on the guest form, used once to join
 let fx = null;            // {date, rates: {EUR:1, USD:..}}
 
@@ -42,17 +46,24 @@ function toast(msg, action) {
 }
 function rid(n = 12) { const a = "abcdefghijkmnpqrstuvwxyz23456789"; let s = ""; for (const x of crypto.getRandomValues(new Uint8Array(n))) s += a[x % a.length]; return s; }
 function refCode() { const a = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; let s = ""; for (const x of crypto.getRandomValues(new Uint8Array(6))) s += a[x % a.length]; return s; }
-const fmt = (v, c) => { try { return new Intl.NumberFormat("de-AT", { style: "currency", currency: c }).format(v); } catch { return v + " " + c; } };
+const fmt = (v, c) => { try { return new Intl.NumberFormat(locale(), { style: "currency", currency: c }).format(v); } catch { return v + " " + c; } };
 const money = (cents, c) => fmt(cents / 100, c);
-const parseNum = s => parseFloat(String(s).replace(/\s/g, "").replace(",", "."));
+// Accepts "12,50", "12.50", "1.234,50" and "1,234.50": when both marks appear, the last one is the decimal point.
+const parseNum = s => {
+  let v = String(s).replace(/[\s'’]/g, ""); const c = v.lastIndexOf(","), d = v.lastIndexOf(".");
+  v = c > -1 && d > -1 ? (c > d ? v.replace(/\./g, "").replace(",", ".") : v.replace(/,/g, "")) : v.replace(",", ".");
+  return parseFloat(v);
+};
+const toInput = n => String(n).replace(".", decimalSep());
+const numPh = () => "0" + decimalSep() + "00";
 const isoDay = ts => { const d = new Date(ts); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 const dayKey = e => e.date || isoDay(e.at || Date.now());
 function dayLabel(key) {
   const today = isoDay(Date.now()), yest = isoDay(Date.now() - 864e5);
-  if (key === today) return "Today";
-  if (key === yest) return "Yesterday";
+  if (key === today) return tr("today");
+  if (key === yest) return tr("yesterday");
   const [y, m, d] = key.split("-").map(Number), dt = new Date(y, m - 1, d);
-  return dt.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", ...(y !== new Date().getFullYear() ? { year: "numeric" } : {}) });
+  return dt.toLocaleDateString(locale(), { weekday: "short", day: "numeric", month: "short", ...(y !== new Date().getFullYear() ? { year: "numeric" } : {}) });
 }
 const inviteLink = code => location.origin + location.pathname + "#join-" + code;
 
@@ -72,14 +83,14 @@ function autoRate(from, to) { const r = fx?.rates; if (!r || !r[from] || !r[to])
 
 /* ---------- data ---------- */
 function myMemberId(trip) { if (!trip || !me) return null; for (const [id, m] of Object.entries(trip.members || {})) if (m.uid === me.uid) return id; return null; }
-const memberName = (trip, id) => trip.members?.[id]?.name || "Someone";
+const memberName = (trip, id) => trip.members?.[id]?.name || tr("someone");
 
 function watchTrips() {
   unsubTrips?.();
   unsubTrips = onSnapshot(query(collection(db, "trips"), where("memberUids", "array-contains", me.uid)), s => {
     trips = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
     if (!cur.id) render();
-  }, () => toast("Couldn't load trips. Reload the page."));
+  }, () => toast(tr("err.loadTrips")));
 }
 function openTrip(id) {
   closeTrip(); cur.id = id; location.hash = "trip-" + id;
@@ -106,11 +117,11 @@ async function createTrip(name, ccy, local, nick) {
 async function joinByCode(code) {
   code = code.toUpperCase().trim();
   const c = await getDoc(doc(db, "codes", code));
-  if (!c.exists()) throw new Error("No trip has that code. Check the six characters and try again.");
+  if (!c.exists()) throw Object.assign(new Error(tr("err.noCode")), { known: true });
   const tripId = c.data().tripId;
   if (!trips.some(t => t.id === tripId)) {
     try { await updateDoc(doc(db, "trips", tripId), { memberUids: arrayUnion(me.uid) }); }
-    catch { throw new Error("No trip has that code. It may have been deleted."); }
+    catch { throw Object.assign(new Error(tr("err.noCodeDeleted")), { known: true }); }
   }
   openTrip(tripId);
 }
@@ -141,14 +152,14 @@ async function markPaid(t, x, btn) {
     const rest = before.transfers.filter(y => !(y.from === x.from && y.to === x.to));
     const count = cur.expenses.filter(e => e.id !== id).length + 1;
     await updateDoc(doc(db, "trips", t.id), { settlement: rest.length ? { ...before, transfers: rest, at: Date.now(), count } : null, paid: {} });
-    toast(rest.length ? "Payment recorded" : "All settled up 🎉", { label: "Undo", run: async () => {
+    toast(rest.length ? tr("pay.recorded") : tr("pay.allSettled"), { label: tr("undo"), run: async () => {
       try {
         await deleteDoc(doc(db, "trips", t.id, "expenses", id));
         await updateDoc(doc(db, "trips", t.id), { settlement: { ...before, at: Date.now(), count: Math.max(0, count - 1) }, paid: {} });
-        toast("Payment undone");
-      } catch { toast("Couldn't undo. Delete the payment from the list instead."); }
+        toast(tr("pay.undone"));
+      } catch { toast(tr("pay.undoFailed")); }
     } });
-  } catch { btn.disabled = false; toast("Couldn't record the payment. Try again."); }
+  } catch { btn.disabled = false; toast(tr("pay.failed")); }
 }
 
 /* ---------- expense list: swipe & delete ---------- */
@@ -157,8 +168,8 @@ async function deleteExpense(t, e) {
   if (ui.editing === id) { ui.editing = null; }
   try {
     await deleteDoc(doc(db, "trips", t.id, "expenses", id));
-    toast("Expense deleted", { label: "Undo", run: () => setDoc(doc(db, "trips", t.id, "expenses", id), data).then(() => toast("Expense restored")).catch(() => toast("Couldn't restore it.")) });
-  } catch { toast("Couldn't delete the expense. Try again."); render(); }
+    toast(tr("x.deleted"), { label: tr("undo"), run: () => setDoc(doc(db, "trips", t.id, "expenses", id), data).then(() => toast(tr("x.restored"))).catch(() => toast(tr("x.restoreFailed"))) });
+  } catch { toast(tr("x.deleteFailed")); render(); }
 }
 function attachSwipe(row, fg, { left, right }) {
   let x0 = 0, y0 = 0, dx = 0, lock = null, pid = null;
@@ -258,8 +269,8 @@ document.addEventListener("focusin", e => {
 function startEdit(e) {
   ui.editing = e.id; ui.sheetOpen = true; render();
   const f = app.querySelector(".xform"); if (!f) return;
-  f.xdesc.value = e.desc; f.xamt.value = String(e.amount).replace(".", ",");
-  f.xccy.value = e.currency; f.xrate.value = String(e.rate || 1).replace(".", ",");
+  f.xdesc.value = e.desc; f.xamt.value = toInput(e.amount);
+  f.xccy.value = e.currency; f.xrate.value = toInput(e.rate || 1);
   f.xpaid.value = e.paidBy; f.xdate.value = dayKey(e); f.xicon.value = e.icon || ""; f._syncIcon?.();
   for (const cb of f.querySelectorAll("input[name=xsplit]")) cb.checked = (e.split || []).includes(cb.value);
   f.dataset.dirty = "1"; f._resync?.();
@@ -270,37 +281,63 @@ function startEdit(e) {
 const firstName = () => guestName || (me?.displayName || "").split(" ")[0];
 function googleSignIn() {
   const p = new GoogleAuthProvider();
-  return signInWithPopup(auth, p).catch(e => { if (e.code === "auth/popup-blocked") signInWithRedirect(auth, p); else if (e.code !== "auth/popup-closed-by-user") toast("Sign-in didn't finish. Try again."); });
+  return signInWithPopup(auth, p).catch(e => { if (e.code === "auth/popup-blocked") signInWithRedirect(auth, p); else if (e.code !== "auth/popup-closed-by-user") toast(tr("auth.signInFailed")); });
 }
 async function saveWithGoogle() {
-  try { const r = await linkWithPopup(me, new GoogleAuthProvider()); me = r.user; toast("Saved. You can now sign in with Google on any device."); render(); }
+  try { const r = await linkWithPopup(me, new GoogleAuthProvider()); me = r.user; toast(tr("auth.saved")); render(); }
   catch (e) {
-    if (e.code === "auth/credential-already-in-use") toast("That Google account already uses MoneTrip. Sign out and sign in with Google instead.");
-    else if (e.code !== "auth/popup-closed-by-user") toast("Couldn't connect Google. Try again.");
+    if (e.code === "auth/credential-already-in-use") toast(tr("auth.googleInUse"));
+    else if (e.code !== "auth/popup-closed-by-user") toast(tr("auth.googleFailed"));
   }
+}
+function langToggle() {
+  const other = lang === "de" ? "en" : "de";
+  return h("button", { class: "ghost lang", lang: other, title: tr("lang.switchTitle"), "aria-label": tr("lang.switchTitle"),
+    onclick: () => { setLang(other); render(); } }, tr("lang.switch"));
 }
 function brand() {
   const guest = me?.isAnonymous;
   const out = h("button", { class: "ghost", onclick: ev => {
     const b = ev.currentTarget;
-    if (guest && !b.dataset.sure) { b.dataset.sure = "1"; b.textContent = "Sure? You'll lose access"; setTimeout(() => { if (b.isConnected) { delete b.dataset.sure; b.textContent = "Sign out"; } }, 4000); return; }
+    if (guest && !b.dataset.sure) { b.dataset.sure = "1"; b.textContent = tr("auth.signOutSure"); setTimeout(() => { if (b.isConnected) { delete b.dataset.sure; b.textContent = tr("auth.signOut"); } }, 4000); return; }
     closeTrip(); signOut(auth);
-  } }, "Sign out");
+  } }, tr("auth.signOut"));
   return h("div", { class: "brand" }, h("div", { class: "top" },
     h("div", { class: "id" }, h("span", { class: "logo", "aria-hidden": "true" }),
       h("div", { class: "words" }, h("span", { class: "name", text: "MoneTrip" }),
-        h("span", { class: "tag", text: "Freunde & Moneten" }))),
+        h("span", { class: "tag", text: tr("brand.tag") }))),
     me ? h("span", { class: "who" }, me.photoURL ? h("img", { src: me.photoURL, alt: "" }) : null,
-      h("span", { text: guest ? (firstName() || "Guest") + " · guest" : (me.displayName || me.email || "") }),
-      guest ? h("button", { class: "ghost", style: "color:var(--accent-text)", onclick: saveWithGoogle }, "Save with Google") : null, out) : null));
+      h("span", { text: guest ? (firstName() || tr("auth.guest")) + tr("auth.guestSuffix") : (me.displayName || me.email || "") }),
+      guest ? h("button", { class: "ghost", style: "color:var(--accent-text)", onclick: saveWithGoogle }, tr("auth.saveWithGoogle")) : null, out, langToggle())
+      : h("span", { class: "who" }, langToggle())));
 }
+
+/* ---------- imprint & privacy ---------- */
+function legalView(kind) {
+  const d = legalDoc(kind, lang);
+  const back = h("button", { class: "back", onclick: () => {
+    if (ui.legalFromApp) history.back();
+    else { history.replaceState(null, "", location.pathname); ui.legal = null; render(); }
+  } }, tr("legal.back"));
+  return [brand(), back, h("article", { class: "panel legal" }, h("h1", { text: d.title }),
+    d.sections.flatMap(sec => [sec.h ? h("h2", { text: sec.h }) : null, ...sec.p.map(x => h("p", { text: x }))]))];
+}
+function legalFooter() {
+  return h("footer", { class: "legal-links" },
+    h("a", { href: "#imprint" }, tr("legal.imprint")), h("span", { "aria-hidden": "true", text: " · " }), h("a", { href: "#privacy" }, tr("legal.privacy")));
+}
+addEventListener("hashchange", () => {
+  const l = legalHash();
+  if (l === ui.legal) return;
+  ui.legalFromApp = !!l; ui.legal = l; render(); if (l) scrollTo(0, 0);
+});
 function render() {
   const ae = document.activeElement?.id, saved = {}, sheetScroll = $("#sheet .xform")?.scrollTop || 0;
   // The expense form keeps its values across redraws only once someone has touched it;
   // an untouched form is rebuilt from fresh defaults (last split / payer, which depend on loaded expenses).
   const oldX = app.querySelector(".xform"), keepX = oldX?.dataset.dirty === "1";
   for (const el of app.querySelectorAll("input[id],select[id]")) if (keepX || !oldX?.contains(el)) saved[el.id] = el.type === "checkbox" ? el.checked : el.value;
-  app.replaceChildren(...(!me ? signInView() : cur.id ? tripView() : homeView()));
+  app.replaceChildren(...(ui.legal ? legalView(ui.legal) : !me ? signInView() : cur.id ? tripView() : homeView()), legalFooter());
   for (const [id, v] of Object.entries(saved)) { const el = document.getElementById(id); if (!el) continue; if (el.type === "checkbox") el.checked = v; else el.value = v; }
   if (keepX) { const nx = app.querySelector(".xform"); if (nx) nx.dataset.dirty = "1"; }
   app.querySelector(".xform")?._resync?.();
@@ -314,32 +351,32 @@ function signInView() {
   const gerr = h("p", { class: "err", hidden: true });
   const guest = h("form", { class: "panel", onsubmit: async e => {
       e.preventDefault(); const f = e.target, name = f.gfirst.value.trim(), c = (code || f.gcode.value).toUpperCase().trim();
-      if (!name || c.length !== 6) { gerr.hidden = false; gerr.textContent = !name ? "Enter your first name." : "Enter the six-character trip code."; return; }
+      if (!name || c.length !== 6) { gerr.hidden = false; gerr.textContent = !name ? tr("signin.needName") : tr("signin.needCode"); return; }
       f.querySelector("button[type=submit]").disabled = true;
       guestName = name; if (!code) location.hash = "join-" + c;
       try { const r = await signInAnonymously(auth); await updateProfile(r.user, { displayName: name }); }
       catch (x) {
         guestName = null; gerr.hidden = false; f.querySelector("button[type=submit]").disabled = false;
         gerr.textContent = ["auth/operation-not-allowed", "auth/admin-restricted-operation"].includes(x.code)
-          ? "Guest sign-in is switched off for MoneTrip. Ask the trip owner to enable it, or sign in with Google."
-          : x.code === "auth/network-request-failed" ? "No connection. Check your internet and try again."
-          : "Couldn't join as a guest (" + (x.code || "unknown error") + "). Try again, or sign in with Google.";
+          ? tr("signin.guestOff")
+          : x.code === "auth/network-request-failed" ? tr("signin.offline")
+          : tr("signin.guestFailed", { code: x.code || tr("signin.unknownError") });
       }
     } },
-    h("h2", { text: code ? "Join as a guest" : "Got a trip code?" }),
-    h("p", { class: "muted", text: "Just your first name. No account needed." }),
+    h("h2", { text: code ? tr("signin.joinAsGuest") : tr("signin.gotCode") }),
+    h("p", { class: "muted", text: tr("signin.justName") }),
     h("div", { class: "row" },
-      h("label", { class: "grow" }, "First name", h("input", { id: "gfirst", name: "gfirst", required: true, maxlength: 30, autocomplete: "given-name", placeholder: "Anna" })),
-      code ? null : h("label", { style: "flex:0 1 140px" }, "Trip code", h("input", { id: "gcode", name: "gcode", maxlength: 6, required: true, autocapitalize: "characters", placeholder: "K7Q2MX", style: "font-family:var(--mono);letter-spacing:.15em;text-transform:uppercase" })),
-      h("button", { class: "primary", type: "submit" }, "Join trip")), gerr);
+      h("label", { class: "grow" }, tr("signin.firstName"), h("input", { id: "gfirst", name: "gfirst", required: true, maxlength: 30, autocomplete: "given-name", placeholder: tr("signin.namePh") })),
+      code ? null : h("label", { style: "flex:0 1 140px" }, tr("tripCode"), h("input", { id: "gcode", name: "gcode", maxlength: 6, required: true, autocapitalize: "characters", placeholder: tr("codePh"), style: "font-family:var(--mono);letter-spacing:.15em;text-transform:uppercase" })),
+      h("button", { class: "primary", type: "submit" }, tr("joinTrip"))), gerr);
   const google = h("div", { class: "panel signin" },
-    h("h2", { text: code ? "Or use your Google account" : "Start your own trip" }),
-    h("p", { class: "muted", text: code ? "Then you can open the trip on any device." : "Sign in to create trips and invite friends." }),
-    h("button", { class: code ? "gbtn" : "primary gbtn", onclick: googleSignIn }, "Sign in with Google"));
+    h("h2", { text: code ? tr("signin.orGoogle") : tr("signin.startOwn") }),
+    h("p", { class: "muted", text: code ? tr("signin.anyDevice") : tr("signin.signInToCreate") }),
+    h("button", { class: code ? "gbtn" : "primary gbtn", onclick: googleSignIn }, tr("auth.signInGoogle")));
   return [brand(),
     h("div", { class: "panel signin" },
-      h("h1", { text: code ? "You're invited to a trip" : "Split trip costs without the awkward maths" }),
-      h("p", { class: "muted", text: "Log who paid what, in any currency. When the trip is over, MoneTrip works out who pays whom, with as few transfers as possible." })),
+      h("h1", { text: code ? tr("signin.invited") : tr("signin.headline") }),
+      h("p", { class: "muted", text: tr("signin.pitch") })),
     ...(code ? [guest, google] : [google, guest])];
 }
 function homeView() {
@@ -350,43 +387,43 @@ function homeView() {
       e.preventDefault(); const f = e.target, name = f.tname.value.trim(), nick = f.tnick.value.trim(); if (!name || !nick) return;
       const btn = f.querySelector("button[type=submit]"); btn.disabled = true;
       try { localStorage.setItem("mt-home", f.thome.value); } catch {}
-      try { await createTrip(name, f.thome.value, f.tlocal.value, nick); } catch { err.hidden = false; err.textContent = "Couldn't create the trip. Check your connection and try again."; btn.disabled = false; }
+      try { await createTrip(name, f.thome.value, f.tlocal.value, nick); } catch { err.hidden = false; err.textContent = tr("home.createFailed"); btn.disabled = false; }
     } },
-    h("h2", { text: "New trip" }),
-    h("label", {}, "Trip name", h("input", { id: "tname", name: "tname", placeholder: "Edinburgh, November", required: true, maxlength: 60 })),
+    h("h2", { text: tr("home.newTrip") }),
+    h("label", {}, tr("home.tripName"), h("input", { id: "tname", name: "tname", placeholder: tr("home.tripNamePh"), required: true, maxlength: 60 })),
     h("div", { class: "pair" },
-      h("label", {}, "Home currency", ccySelect("thome", home), h("span", { class: "hint", text: "Everyone settles up in this" })),
-      h("label", {}, "Trip currency", ccySelect("tlocal", home), h("span", { class: "hint", text: "What you'll mostly pay in" }))),
-    h("label", {}, "Your name on this trip", h("input", { id: "tnick", name: "tnick", value: firstName(), required: true, maxlength: 30 })),
+      h("label", {}, tr("home.homeCcy"), ccySelect("thome", home), h("span", { class: "hint", text: tr("home.homeCcyHint") })),
+      h("label", {}, tr("home.tripCcy"), ccySelect("tlocal", home), h("span", { class: "hint", text: tr("home.tripCcyHint") }))),
+    h("label", {}, tr("home.yourName"), h("input", { id: "tnick", name: "tnick", value: firstName(), required: true, maxlength: 30 })),
     err,
-    h("button", { class: "primary", type: "submit" }, "Create trip"));
+    h("button", { class: "primary", type: "submit" }, tr("home.create")));
   const jerr = h("p", { class: "err", hidden: true });
   const joinForm = h("form", { class: "panel", onsubmit: async e => {
       e.preventDefault();
-      try { jerr.hidden = true; await joinByCode(e.target.jcode.value); } catch (x) { jerr.hidden = false; jerr.textContent = x.message?.startsWith("No trip") ? x.message : "Couldn't join that trip. Try again."; }
+      try { jerr.hidden = true; await joinByCode(e.target.jcode.value); } catch (x) { jerr.hidden = false; jerr.textContent = x.known ? x.message : tr("err.join"); }
     } },
-    h("h2", { text: "Join with a trip code" }),
-    h("p", { class: "muted", text: "Got an invite? Enter the six-character code, or just open the invite link." }),
+    h("h2", { text: tr("home.joinTitle") }),
+    h("p", { class: "muted", text: tr("home.joinHint") }),
     h("div", { class: "row" },
-      h("label", { class: "grow" }, "Trip code", h("input", { id: "jcode", name: "jcode", placeholder: "K7Q2MX", maxlength: 6, required: true, autocapitalize: "characters", style: "font-family:var(--mono);letter-spacing:.2em;text-transform:uppercase" })),
-      h("button", { type: "submit" }, "Join trip")), jerr);
+      h("label", { class: "grow" }, tr("tripCode"), h("input", { id: "jcode", name: "jcode", placeholder: tr("codePh"), maxlength: 6, required: true, autocapitalize: "characters", style: "font-family:var(--mono);letter-spacing:.2em;text-transform:uppercase" })),
+      h("button", { type: "submit" }, tr("joinTrip"))), jerr);
   const list = trips.length ? h("div", { class: "trips" }, trips.map(t => {
       const n = Object.keys(t.members || {}).length;
       return h("button", { class: "trip", onclick: () => openTrip(t.id) },
-        h("span", {}, h("strong", { text: t.name }), h("br"), h("span", { class: "muted", text: `${n} ${n === 1 ? "person" : "people"} · ${t.localCurrency && t.localCurrency !== t.currency ? t.localCurrency + " → " : ""}${t.currency}${t.settlement ? " · settled" : ""}` })),
+        h("span", {}, h("strong", { text: t.name }), h("br"), h("span", { class: "muted", text: `${tr("people", { n })} · ${t.localCurrency && t.localCurrency !== t.currency ? t.localCurrency + " → " : ""}${t.currency}${t.settlement ? tr("home.settled") : ""}` })),
         h("span", { class: "code", text: t.code }));
     }))
-    : h("div", { class: "empty", text: "No trips yet. Create one below, or join a friend's trip with their code." });
+    : h("div", { class: "empty", text: tr("home.empty") });
   const guestNote = h("div", { class: "panel" },
-    h("h2", { text: "Start your own trip" }),
-    h("p", { class: "muted", text: "You're using MoneTrip as a guest, so you can join trips but not create them. Save your account with Google to start your own." }),
-    h("button", { class: "primary", style: "align-self:flex-start", onclick: saveWithGoogle }, "Save with Google"));
-  return [brand(), h("h1", { text: "Your trips" }), list, me.isAnonymous ? guestNote : createForm, joinForm];
+    h("h2", { text: tr("signin.startOwn") }),
+    h("p", { class: "muted", text: tr("home.guestNote") }),
+    h("button", { class: "primary", style: "align-self:flex-start", onclick: saveWithGoogle }, tr("auth.saveWithGoogle")));
+  return [brand(), h("h1", { text: tr("home.yourTrips") }), list, me.isAnonymous ? guestNote : createForm, joinForm];
 }
 
 function tripView() {
-  const t = cur.trip, back = h("button", { class: "back", onclick: goHome }, "← All trips");
-  if (!t) return [brand(), back, h("div", { class: "panel" }, h("p", { class: "muted", text: cur.missing ? "This trip doesn't exist or you're not on it. Ask for a new invite link." : "Loading trip…" }))];
+  const t = cur.trip, back = h("button", { class: "back", onclick: goHome }, tr("trip.allTrips"));
+  if (!t) return [brand(), back, h("div", { class: "panel" }, h("p", { class: "muted", text: cur.missing ? tr("trip.missing") : tr("trip.loading") }))];
   const mine = myMemberId(t), ccy = t.currency, ids = Object.keys(t.members || {});
   const { bal, paid, share } = balances(t.members, cur.expenses);
   const spends = cur.expenses.filter(e => e.kind !== "payment");
@@ -400,38 +437,38 @@ function tripView() {
         e.preventDefault(); const n = e.target.rname.value.trim();
         if (!n || n === t.name) { ui.renaming = null; render(); return; }
         e.target.querySelector("button").disabled = true;
-        try { await updateDoc(doc(db, "trips", t.id), { name: n }); ui.renaming = null; render(); toast("Trip renamed"); }
-        catch { e.target.querySelector("button").disabled = false; toast("Couldn't rename the trip. Try again."); }
+        try { await updateDoc(doc(db, "trips", t.id), { name: n }); ui.renaming = null; render(); toast(tr("trip.renamed")); }
+        catch { e.target.querySelector("button").disabled = false; toast(tr("trip.renameFailed")); }
       } },
-        h("input", { id: "rname", name: "rname", value: t.name, maxlength: 60, required: true, "aria-label": "Trip name",
+        h("input", { id: "rname", name: "rname", value: t.name, maxlength: 60, required: true, "aria-label": tr("home.tripName"),
           onkeydown: e => { if (e.key === "Escape") { ui.renaming = null; render(); } } }),
         h("div", { class: "rename-actions" },
-          h("button", { type: "submit", class: "on-accent" }, "Save"),
-          h("button", { type: "button", class: "ghost on-accent", onclick: () => { ui.renaming = null; render(); } }, "Cancel")))
+          h("button", { type: "submit", class: "on-accent" }, tr("save")),
+          h("button", { type: "button", class: "ghost on-accent", onclick: () => { ui.renaming = null; render(); } }, tr("cancel"))))
     : h("div", { class: "title-row" }, h("h1", { text: t.name }),
-        isAdmin ? h("button", { class: "icon-btn", title: "Rename trip", "aria-label": "Rename trip",
+        isAdmin ? h("button", { class: "icon-btn", title: tr("trip.rename"), "aria-label": tr("trip.rename"),
           onclick: () => { ui.renaming = t.id; render(); const i = document.getElementById("rname"); i.value = t.name; i.focus(); i.select(); } }) : null);
   if (isAdmin && ui.renaming !== t.id) titleBlock.querySelector(".icon-btn").innerHTML = pencil;
 
   out.push(h("div", { class: "ticket" },
-    h("div", { style: "min-width:0" }, h("div", { class: "lbl", text: "Trip" }), titleBlock),
-    h("div", { style: "text-align:right" }, h("div", { class: "lbl", text: "Trip code" }), h("div", { class: "ref", text: t.code })),
-    h("div", { class: "meta" }, h("span", {}, "Total ", h("b", { class: "num", text: money(total, ccy) })), h("span", {}, `${ids.length} ${ids.length === 1 ? "person" : "people"}`), h("span", {}, `${spends.length} ${spends.length === 1 ? "expense" : "expenses"}`), h("span", {}, (t.localCurrency && t.localCurrency !== ccy ? "Paying in " + t.localCurrency + " · " : "") + "Settles in " + ccy))));
+    h("div", { style: "min-width:0" }, h("div", { class: "lbl", text: tr("trip.label") }), titleBlock),
+    h("div", { style: "text-align:right" }, h("div", { class: "lbl", text: tr("tripCode") }), h("div", { class: "ref", text: t.code })),
+    h("div", { class: "meta" }, h("span", {}, tr("trip.total"), h("b", { class: "num", text: money(total, ccy) })), h("span", {}, tr("people", { n: ids.length })), h("span", {}, tr("expenses", { n: spends.length })), h("span", {}, (t.localCurrency && t.localCurrency !== ccy ? tr("trip.payingIn", { c: t.localCurrency }) : "") + tr("trip.settlesIn", { c: ccy })))));
 
   if (!mine && guestName && !cur.autoJoined) {
     cur.autoJoined = true; const n = guestName;
     const match = ids.find(id => !t.members[id].uid && t.members[id].name.trim().toLowerCase() === n.toLowerCase());
-    (match ? claimMember(match) : addMember(n, true)).then(() => toast("Welcome, " + n + "!")).catch(() => { cur.autoJoined = false; toast("Couldn't add you. Pick your name below."); });
-    return [...out, h("div", { class: "panel" }, h("p", { class: "muted", text: "Adding you to the trip…" }))];
+    (match ? claimMember(match) : addMember(n, true)).then(() => toast(tr("trip.welcome", { name: n }))).catch(() => { cur.autoJoined = false; toast(tr("trip.addFailed")); });
+    return [...out, h("div", { class: "panel" }, h("p", { class: "muted", text: tr("trip.adding") }))];
   }
   if (!mine || ui.joinPick) {
     const free = ids.filter(id => !t.members[id].uid);
     const nf = h("form", { class: "row", onsubmit: async e => { e.preventDefault(); const n = e.target.jn.value.trim(); if (n) await addMember(n, true); } },
-      h("label", { class: "grow" }, "Join as a new person", h("input", { id: "jn", name: "jn", value: firstName(), required: true, maxlength: 30 })),
-      h("button", { class: "primary", type: "submit" }, "Join"));
-    out.push(h("div", { class: "panel" }, h("h2", { text: "Which one are you?" }),
-      free.length ? h("div", { class: "chips" }, free.map(id => h("button", { onclick: () => claimMember(id) }, "I'm " + t.members[id].name))) : null, nf,
-      mine ? h("button", { class: "ghost", onclick: () => { ui.joinPick = false; render(); } }, "Cancel") : null));
+      h("label", { class: "grow" }, tr("trip.joinNew"), h("input", { id: "jn", name: "jn", value: firstName(), required: true, maxlength: 30 })),
+      h("button", { class: "primary", type: "submit" }, tr("trip.join")));
+    out.push(h("div", { class: "panel" }, h("h2", { text: tr("trip.whoAreYou") }),
+      free.length ? h("div", { class: "chips" }, free.map(id => h("button", { onclick: () => claimMember(id) }, tr("trip.imName", { name: t.members[id].name })))) : null, nf,
+      mine ? h("button", { class: "ghost", onclick: () => { ui.joinPick = false; render(); } }, tr("cancel")) : null));
     if (!mine) return out;
   }
 
@@ -442,56 +479,56 @@ function tripView() {
     const minePay = s.transfers.filter(x => x.from === mine || x.to === mine), others = s.transfers.filter(x => !(x.from === mine || x.to === mine));
     const row = x => {
       const isMine = x.from === mine || x.to === mine;
-      const label = x.from === mine ? ["You pay ", h("b", { text: memberName(t, x.to) })] : x.to === mine ? [h("b", { text: memberName(t, x.from) }), " pays you"] : [h("b", { text: memberName(t, x.from) }), h("span", { class: "arrow" }, " → "), h("b", { text: memberName(t, x.to) })];
+      const label = x.from === mine ? [tr("pay.youPay"), h("b", { text: memberName(t, x.to) })] : x.to === mine ? [h("b", { text: memberName(t, x.from) }), tr("pay.paysYou")] : [h("b", { text: memberName(t, x.from) }), h("span", { class: "arrow" }, " → "), h("b", { text: memberName(t, x.to) })];
       return h("div", { class: "pay" + (isMine ? " mine" : "") }, h("span", {}, label), h("span", { class: "num", text: money(x.amount, s.currency || ccy) }),
-        h("button", { onclick: ev => markPaid(t, x, ev.currentTarget) }, "Mark paid"));
+        h("button", { onclick: ev => markPaid(t, x, ev.currentTarget) }, tr("pay.markPaid")));
     };
     out.push(h("div", { class: "panel" },
-      h("div", { class: "top" }, h("h2", { text: "Pay back" }),
+      h("div", { class: "top" }, h("h2", { text: tr("pay.title") }),
         h("span", { class: "head-right" },
-          h("span", { class: "muted", text: `${s.transfers.length} ${s.transfers.length === 1 ? "transfer" : "transfers"} left` }),
-          h("button", { class: "icon-btn close-btn", title: "Close pay back", "aria-label": "Close pay back", onclick: async ev => {
+          h("span", { class: "muted", text: tr("pay.left", { n: s.transfers.length }) }),
+          h("button", { class: "icon-btn close-btn", title: tr("pay.close"), "aria-label": tr("pay.close"), onclick: async ev => {
             // Hide straight away and save; Undo brings the plan back.
             const before = s, panel = ev.currentTarget.closest(".panel");
             panel.hidden = true;
             try {
               await updateDoc(doc(db, "trips", t.id), { settlement: null });
-              toast("Pay back closed", { label: "Undo", run: () => updateDoc(doc(db, "trips", t.id), { settlement: before }).catch(() => toast("Couldn't bring it back. Tap Settle up instead.")) });
-            } catch { panel.hidden = false; toast("Couldn't close it. Try again."); }
+              toast(tr("pay.closed"), { label: tr("undo"), run: () => updateDoc(doc(db, "trips", t.id), { settlement: before }).catch(() => toast(tr("pay.restoreFailed"))) });
+            } catch { panel.hidden = false; toast(tr("pay.closeFailed")); }
           } }, "✕"))),
-      stale ? h("p", { class: "notice", text: "Expenses changed after this plan was made. Settle up again to update it." }) : null,
-      s.transfers.length ? h("p", { class: "muted small", text: "Marking a transfer as paid adds it to the expenses as a payment, so you can settle one at a time." }) : null,
-      !s.transfers.length ? h("p", { class: "muted", text: "Everyone is even. Nobody needs to pay anything." }) : null,
-      minePay.length ? h("h3", { text: "Your list" }) : s.transfers.length ? h("p", { class: "muted", text: "You're even. Nothing to pay or collect." }) : null,
-      minePay.map(row), others.length ? h("h3", { text: "Everyone else" }) : null, others.map(row)));
+      stale ? h("p", { class: "notice", text: tr("pay.stale") }) : null,
+      s.transfers.length ? h("p", { class: "muted small", text: tr("pay.howItWorks") }) : null,
+      !s.transfers.length ? h("p", { class: "muted", text: tr("pay.allEven") }) : null,
+      minePay.length ? h("h3", { text: tr("pay.yourList") }) : s.transfers.length ? h("p", { class: "muted", text: tr("pay.youEven") }) : null,
+      minePay.map(row), others.length ? h("h3", { text: tr("pay.others") }) : null, others.map(row)));
   }
 
   /* balances */
   const maxAbs = Math.max(1, ...ids.map(id => Math.abs(bal[id])));
   out.push(h("div", { class: "panel" },
-    h("div", { class: "top" }, h("h2", { text: "Balances" }),
+    h("div", { class: "top" }, h("h2", { text: tr("bal.title") }),
       h("button", { class: "primary", disabled: !cur.expenses.length, onclick: async ev => {
         ev.target.disabled = true; const transfers = settle(bal);
         try { await updateDoc(doc(db, "trips", t.id), { settlement: { at: Date.now(), by: mine, currency: ccy, count: cur.expenses.length, transfers }, paid: {} });
-          toast(transfers.length ? `Done: ${transfers.length} ${transfers.length === 1 ? "transfer" : "transfers"} settle everything` : "Everyone is already even"); }
-        catch { toast("Couldn't save the plan. Try again."); ev.target.disabled = false; }
-      } }, s ? "Settle up again" : "Settle up")),
-    h("div", { class: "list" }, [...ids].sort((a, b) => memberName(t, a).localeCompare(memberName(t, b), "de", { sensitivity: "base" })).map(id => {
+          toast(transfers.length ? tr("bal.done", { n: transfers.length }) : tr("bal.alreadyEven")); }
+        catch { toast(tr("bal.saveFailed")); ev.target.disabled = false; }
+      } }, s ? tr("bal.settleAgain") : tr("bal.settle"))),
+    h("div", { class: "list" }, [...ids].sort((a, b) => memberName(t, a).localeCompare(memberName(t, b), locale(), { sensitivity: "base" })).map(id => {
       const b = bal[id];
       return h("div", { class: "li" },
-        h("span", {}, h("b", { text: memberName(t, id) }), id === mine ? h("span", { class: "muted", text: " (you)" }) : null),
+        h("span", {}, h("b", { text: memberName(t, id) }), id === mine ? h("span", { class: "muted", text: tr("youSuffix") }) : null),
         h("span", { class: "num " + (b > 0 ? "pos" : b < 0 ? "neg" : "muted"), text: (b > 0 ? "+" : "") + money(b, ccy) }),
-        h("span", { class: "sub", text: `paid ${money(paid[id], ccy)} · share ${money(share[id], ccy)}` }),
+        h("span", { class: "sub", text: tr("bal.paidShare", { paid: money(paid[id], ccy), share: money(share[id], ccy) }) }),
         h("div", { class: "bar" }, h("i", { style: `width:${Math.abs(b) / maxAbs * 100}%;background:var(${b >= 0 ? "--bar-pos" : "--bar-neg"})` })));
     }))));
 
   /* add expense */
   const xerr = h("p", { class: "err", hidden: true });
   const rateNote = h("span", { class: "fx-conv" });
-  const manualNote = h("p", { class: "fx-info", hidden: true, text: "No automatic rate right now. Enter the rate your bank used." });
+  const manualNote = h("p", { class: "fx-info", hidden: true, text: tr("x.noRate") });
   const rateBox = h("div", { class: "fx", hidden: true },
     h("div", { class: "fx-row" },
-      h("label", { class: "fx-line", for: "xrate" }, h("span", { id: "fxfrom" }), h("input", { id: "xrate", name: "xrate", inputmode: "decimal", placeholder: "0,00", "aria-label": "Exchange rate" }), h("span", { text: ccy })),
+      h("label", { class: "fx-line", for: "xrate" }, h("span", { id: "fxfrom" }), h("input", { id: "xrate", name: "xrate", inputmode: "decimal", placeholder: numPh(), "aria-label": tr("x.rate") }), h("span", { text: ccy })),
       rateNote),
     manualNote);
   const preview = f => {
@@ -505,7 +542,7 @@ function tripView() {
     $("#fxfrom", rateBox).textContent = "1 " + c + " =";
     const a = c === ccy ? null : autoRate(c, ccy);
     f.dataset.auto = a ? "1" : "";
-    f.xrate.value = a ? String(a).replace(".", ",") : "";
+    f.xrate.value = a ? toInput(a) : "";
     preview(f);
   };
   const editing = ui.editing ? cur.expenses.find(x => x.id === ui.editing) : null;
@@ -515,68 +552,68 @@ function tripView() {
   const defaultSplit = new Set(lastSplit.length ? lastSplit : ids);
   // Paid by: whoever paid in this person's own last expense, else themselves.
   const defaultPaid = lastOwn && ids.includes(lastOwn.paidBy) ? lastOwn.paidBy : mine;
-  const byName = ids.slice().sort((a, b) => memberName(t, a).localeCompare(memberName(t, b), "de", { sensitivity: "base" }));
+  const byName = ids.slice().sort((a, b) => memberName(t, a).localeCompare(memberName(t, b), locale(), { sensitivity: "base" }));
   if (ui.editing && !editing && cur.expenses.length) ui.editing = null;
-  const iconBtn = h("button", { type: "button", class: "icon-pick", "aria-label": "Choose an icon", "aria-expanded": "false",
+  const iconBtn = h("button", { type: "button", class: "icon-pick", "aria-label": tr("x.chooseIcon"), "aria-expanded": "false",
     onclick: () => { picks.hidden = !picks.hidden; iconBtn.setAttribute("aria-expanded", String(!picks.hidden)); } });
   const pick = ic => { form.xicon.value = ic; form.dataset.dirty = "1"; picks.hidden = true; iconBtn.setAttribute("aria-expanded", "false"); form._syncIcon(); };
   const firstEmoji = v => { for (const { segment } of new Intl.Segmenter().segment(v)) if (/\p{Extended_Pictographic}|\p{Regional_Indicator}/u.test(segment)) return segment; return ""; };
-  const picks = h("div", { class: "picks", hidden: true, role: "group", "aria-label": "Icons" },
-    h("input", { class: "emoji-in", placeholder: "Or type any emoji…", "aria-label": "Type an emoji", autocomplete: "off", enterkeyhint: "done",
+  const picks = h("div", { class: "picks", hidden: true, role: "group", "aria-label": tr("x.icons") },
+    h("input", { class: "emoji-in", placeholder: tr("x.emojiPh"), "aria-label": tr("x.emoji"), autocomplete: "off", enterkeyhint: "done",
       oninput: e => { const em = firstEmoji(e.target.value); if (em) { e.target.value = ""; pick(em); } },
       onkeydown: e => { if (e.key === "Enter") e.preventDefault(); } }),
     PICKS.map(ic => h("button", { type: "button", onclick: () => pick(ic) }, ic)),
-    h("button", { type: "button", class: "auto", onclick: () => pick("") }, "Auto"));
+    h("button", { type: "button", class: "auto", onclick: () => pick("") }, tr("auto")));
   const form = h("form", { class: "panel xform", oninput: e => { e.currentTarget.dataset.dirty = "1"; if (e.target.id === "xrate") e.currentTarget.dataset.auto = ""; if (e.target.id === "xdesc") form._syncIcon(); if (e.target.name === "xsplit") form._syncFor(); preview(e.currentTarget); }, onsubmit: async e => {
       e.preventDefault(); const f = e.target; xerr.hidden = true;
       const amount = parseNum(f.xamt.value), c = f.xccy.value, rate = c === ccy ? 1 : parseNum(f.xrate.value);
       const split = [...f.querySelectorAll("input[name=xsplit]:checked")].map(i => i.value);
-      const bad = !f.xdesc.value.trim() ? "Add a short description." : !(amount > 0) ? "Enter an amount above zero." : !(rate > 0) ? `Enter how many ${ccy} one ${c} is worth.` : !split.length ? "Pick at least one person to split with." : null;
+      const bad = !f.xdesc.value.trim() ? tr("x.needDesc") : !(amount > 0) ? tr("x.needAmount") : !(rate > 0) ? tr("x.needRate", { ccy, c }) : !split.length ? tr("x.needSplit") : null;
       if (bad) { xerr.hidden = false; xerr.textContent = bad; return; }
       const btn = f.querySelector("button[type=submit]"); btn.disabled = true;
       const data = { desc: f.xdesc.value.trim(), icon: f.xicon.value, amount, currency: c, rate, paidBy: f.xpaid.value, split, date: f.xdate.value || isoDay(Date.now()) };
       if (data.icon !== (editing?.icon || "")) rememberIcon(t, data.desc, data.icon);
       try {
-        if (editing) { await updateDoc(doc(db, "trips", t.id, "expenses", editing.id), { ...data, changed: Date.now() }); closeSheet(); toast("Expense updated"); }
+        if (editing) { await updateDoc(doc(db, "trips", t.id, "expenses", editing.id), { ...data, changed: Date.now() }); closeSheet(); toast(tr("x.updated")); }
         else {
           const newId = rid(); ui.justAdded = { id: newId, t0: Date.now() };
           // Hide the sheet right away so the new row's fold-in animation is visible; keep the values until the save succeeds.
           ui.sheetOpen = false; syncSheet();
           try { await setDoc(doc(db, "trips", t.id, "expenses", newId), { ...data, at: Date.now(), by: mine }); }
           catch (err) { ui.justAdded = null; openSheet(); throw err; }
-          resetExpenseForm(); $("#fab")?.focus({ preventScroll: true }); toast("Expense added");
+          resetExpenseForm(); $("#fab")?.focus({ preventScroll: true }); toast(tr("x.added"));
         }
       }
-      catch { xerr.hidden = false; xerr.textContent = "Couldn't save the expense. Try again."; toast("Couldn't save the expense. Try again."); }
+      catch { xerr.hidden = false; xerr.textContent = tr("x.saveFailed"); toast(tr("x.saveFailed")); }
       btn.disabled = false;
     } },
-    h("div", { class: "top sheet-head" }, h("h2", { id: "sheettitle", text: editing ? "Edit expense" : "Add an expense" }),
-      h("button", { type: "button", class: "icon-btn close-btn", "aria-label": "Close", onclick: closeSheet }, "✕")),
-    h("div", { class: "field" }, h("label", { for: "xdesc", text: "What for" }),
-      h("div", { class: "desc-row" }, iconBtn, h("input", { id: "xdesc", name: "xdesc", placeholder: "Dinner, taxi, hotel…", maxlength: 80, autocomplete: "off" }),
+    h("div", { class: "top sheet-head" }, h("h2", { id: "sheettitle", text: editing ? tr("x.editTitle") : tr("x.addTitle") }),
+      h("button", { type: "button", class: "icon-btn close-btn", "aria-label": tr("close"), onclick: closeSheet }, "✕")),
+    h("div", { class: "field" }, h("label", { for: "xdesc", text: tr("x.whatFor") }),
+      h("div", { class: "desc-row" }, iconBtn, h("input", { id: "xdesc", name: "xdesc", placeholder: tr("x.descPh"), maxlength: 80, autocomplete: "off" }),
         h("input", { type: "hidden", id: "xicon", name: "xicon", value: "" })),
       picks),
-    h("label", {}, "Amount",
+    h("label", {}, tr("x.amount"),
       h("span", { class: "money" },
-        h("input", { id: "xamt", name: "xamt", inputmode: "decimal", placeholder: "0,00", autocomplete: "off" }),
-        h("select", { id: "xccy", name: "xccy", "aria-label": "Currency", onchange: e => syncRate(e.target.form) }, CURRENCIES.map(c => h("option", { value: c, selected: c === (t.localCurrency || ccy) }, c))))),
+        h("input", { id: "xamt", name: "xamt", inputmode: "decimal", placeholder: numPh(), autocomplete: "off" }),
+        h("select", { id: "xccy", name: "xccy", "aria-label": tr("x.currency"), onchange: e => syncRate(e.target.form) }, CURRENCIES.map(c => h("option", { value: c, selected: c === (t.localCurrency || ccy) }, c))))),
     rateBox,
     h("div", { class: "pair" },
-      h("label", {}, "Paid by", h("select", { id: "xpaid", name: "xpaid" }, byName.map(id => h("option", { value: id, selected: id === defaultPaid }, memberName(t, id) + (id === mine ? " (you)" : ""))))),
-      h("label", {}, "Date", h("input", { id: "xdate", name: "xdate", type: "date", value: isoDay(Date.now()), max: isoDay(Date.now() + 864e5 * 366) }))),
+      h("label", {}, tr("x.paidBy"), h("select", { id: "xpaid", name: "xpaid" }, byName.map(id => h("option", { value: id, selected: id === defaultPaid }, memberName(t, id) + (id === mine ? tr("youSuffix") : ""))))),
+      h("label", {}, tr("x.date"), h("input", { id: "xdate", name: "xdate", type: "date", value: isoDay(Date.now()), max: isoDay(Date.now() + 864e5 * 366) }))),
     h("div", { class: "forfield" },
-      h("span", { class: "flabel", id: "forlbl", text: "For" }),
+      h("span", { class: "flabel", id: "forlbl", text: tr("x.for") }),
       h("button", { type: "button", class: "forbtn", id: "forbtn", "aria-labelledby": "forlbl forsum", "aria-controls": "forlist", "aria-expanded": String(!!ui.forOpen),
         onclick: ev => { ui.forOpen = !ui.forOpen; const b = ev.currentTarget; b.setAttribute("aria-expanded", String(ui.forOpen)); b.form.querySelector("#forlist").hidden = !ui.forOpen; } },
         h("span", { id: "forsum" }), h("span", { class: "chev", "aria-hidden": "true" })),
-      h("div", { class: "checks", id: "forlist", role: "group", "aria-label": "Split equally between", hidden: !ui.forOpen },
+      h("div", { class: "checks", id: "forlist", role: "group", "aria-label": tr("x.splitBetween"), hidden: !ui.forOpen },
         byName.map(id => h("label", {}, h("input", { type: "checkbox", name: "xsplit", value: id, checked: defaultSplit.has(id), id: "xs-" + id }), memberName(t, id))))),
     xerr,
     editing
       ? h("div", { class: "pair" },
-          h("button", { type: "button", onclick: closeSheet }, "Cancel"),
-          h("button", { class: "primary", type: "submit" }, "Save changes"))
-      : h("button", { class: "primary", type: "submit" }, "Add expense"));
+          h("button", { type: "button", onclick: closeSheet }, tr("cancel")),
+          h("button", { class: "primary", type: "submit" }, tr("x.saveChanges")))
+      : h("button", { class: "primary", type: "submit" }, tr("x.add")));
   if (editing) form.classList.add("editing");
   form._syncIcon = () => {
     const own = form.xicon.value;
@@ -587,85 +624,86 @@ function tripView() {
   form._syncIcon();
   form._syncFor = () => {
     const on = [...form.querySelectorAll("input[name=xsplit]")].filter(c => c.checked).map(c => c.value);
-    const names = on.map(id => id === mine ? "you" : memberName(t, id));
-    $("#forsum", form).textContent = !on.length ? "Nobody yet"
-      : on.length === ids.length ? (ids.length > 1 ? `Everyone (${ids.length})` : "Just you")
-      : names.length <= 3 ? names.join(", ").replace(/^you/, "You") : names.slice(0, 2).join(", ").replace(/^you/, "You") + ` +${names.length - 2}`;
+    const names = on.map(id => id === mine ? tr("you") : memberName(t, id));
+    const list = names.length <= 3 ? names.join(", ") : names.slice(0, 2).join(", ") + ` +${names.length - 2}`;
+    $("#forsum", form).textContent = !on.length ? tr("x.nobody")
+      : on.length === ids.length ? (ids.length > 1 ? tr("x.everyone", { n: ids.length }) : tr("x.justYou"))
+      : on[0] === mine ? list.charAt(0).toLocaleUpperCase(locale()) + list.slice(1) : list;
   };
   form._resync = () => {
     form._syncFor();
     const c = form.xccy.value; rateBox.hidden = c === ccy; form.xrate.required = c !== ccy;
     $("#fxfrom", rateBox).textContent = "1 " + c + " =";
     const a = c === ccy ? null : autoRate(c, ccy);
-    if (a && !form.xrate.value) form.xrate.value = String(a).replace(".", ",");
+    if (a && !form.xrate.value) form.xrate.value = toInput(a);
     form.dataset.auto = a && parseNum(form.xrate.value) === a ? "1" : "";
     preview(form);
   };
   form.classList.add("sheet");
   out.push(h("div", { class: "sheet-wrap", id: "sheet", hidden: !ui.sheetOpen, role: "dialog", "aria-modal": "true", "aria-labelledby": "sheettitle",
       onclick: e => { if (e.target === e.currentTarget) closeSheet(); } }, form),
-    h("button", { class: "fab", id: "fab", "aria-label": "Add expense", title: "Add expense", hidden: !!ui.sheetOpen, onclick: openSheet }, h("span", { "aria-hidden": "true", text: "+" })));
+    h("button", { class: "fab", id: "fab", "aria-label": tr("x.add"), title: tr("x.add"), hidden: !!ui.sheetOpen, onclick: openSheet }, h("span", { "aria-hidden": "true", text: "+" })));
 
   /* expenses */
   const hasOwn = cur.expenses.some(e => e.by === mine && e.kind !== "payment");
   out.push(h("div", { class: "panel" },
-    h("div", { class: "top" }, h("h2", { text: "Expenses" }),
-      cur.expenses.length ? h("span", { class: "hint", text: hasOwn ? "Swipe ← to delete · → to edit yours" : "Swipe ← to delete" }) : null),
+    h("div", { class: "top" }, h("h2", { text: tr("list.title") }),
+      cur.expenses.length ? h("span", { class: "hint", text: hasOwn ? tr("list.swipeBoth") : tr("list.swipeDel") }) : null),
     cur.expenses.length ? h("div", { class: "list" }, cur.expenses.flatMap((e, i) => {
       const base = Math.round(e.amount * (e.rate || 1) * 100), isPay = e.kind === "payment", own = e.by === mine && !isPay;
       const fg = h("div", { class: "li xp" + (isPay ? " payment" : "") + (ui.editing === e.id ? " is-editing" : ""), tabindex: 0,
-          "aria-label": `${e.desc}, ${fmt(e.amount, e.currency)}. ${own ? "Press E to edit, " : ""}Delete key to delete.`,
+          "aria-label": `${e.desc}, ${fmt(e.amount, e.currency)}. ${own ? tr("list.ariaEdit") : ""}${tr("list.ariaDel")}`,
           onkeydown: ev => { if (own && ev.key.toLowerCase() === "e") startEdit(e); else if (ev.key === "Delete") deleteExpense(t, e); } },
         h("span", { class: "xi", "aria-hidden": "true", text: isPay ? "💸" : iconFor(t, e) }),
         h("b", { text: isPay ? `${memberName(t, e.paidBy)} → ${memberName(t, e.split[0])}` : e.desc }),
         h("span", { class: "act" }, h("span", { class: "num", text: fmt(e.amount, e.currency) })),
-        h("span", { class: "sub", text: isPay ? "Payment from settle up" : `${memberName(t, e.paidBy)} paid · split ${e.split.length} ways${e.currency !== ccy ? ` · ${money(base, ccy)} at ${e.rate}` : ""}` }));
+        h("span", { class: "sub", text: isPay ? tr("list.paymentSub") : tr("list.paidSplit", { name: memberName(t, e.paidBy), n: e.split.length }) + (e.currency !== ccy ? tr("list.converted", { amount: money(base, ccy), rate: (e.rate || 1).toLocaleString(locale(), { maximumFractionDigits: 6 }) }) : "") }));
       // A just-added expense folds into the list. Live updates can redraw the list mid-animation,
       // so resume it where it was with a negative delay instead of restarting.
       const ja = ui.justAdded, age = ja && ja.id === e.id ? Date.now() - ja.t0 : Infinity;
       const row = h("div", { class: "swipe" + (age < 900 ? " entering" : ""), style: age < 900 ? `animation-delay:${-age}ms` : null },
-        h("div", { class: "sw-bg sw-del", "aria-hidden": "true" }, "Delete"),
-        h("div", { class: "sw-bg sw-edit", "aria-hidden": "true" }, "Edit"),
+        h("div", { class: "sw-bg sw-del", "aria-hidden": "true" }, tr("list.delete")),
+        h("div", { class: "sw-bg sw-edit", "aria-hidden": "true" }, tr("list.edit")),
         fg);
       attachSwipe(row, fg, { left: () => deleteExpense(t, e), right: own ? () => startEdit(e) : null });
       const key = dayKey(e);
       if (i > 0 && dayKey(cur.expenses[i - 1]) === key) return [row];
       const dayTotal = cur.expenses.filter(x => dayKey(x) === key && x.kind !== "payment").reduce((sum, x) => sum + Math.round(x.amount * (x.rate || 1) * 100), 0);
       return [h("div", { class: "day" }, h("span", { text: dayLabel(key) }), h("span", { class: "num", text: money(dayTotal, ccy) })), row];
-    })) : h("div", { class: "empty", text: "No expenses yet. Add the first one above, like the hotel or a dinner." })));
+    })) : h("div", { class: "empty", text: tr("list.empty") })));
 
   /* people & invite */
-  const gform = h("form", { class: "row", onsubmit: async e => { e.preventDefault(); const n = e.target.gname.value.trim(); if (!n) return; await addMember(n, false); e.target.reset(); toast(n + " added"); } },
-    h("label", { class: "grow" }, "Add someone who hasn't joined yet", h("input", { id: "gname", name: "gname", placeholder: "Name", maxlength: 30 })), h("button", { type: "submit" }, "Add"));
+  const gform = h("form", { class: "row", onsubmit: async e => { e.preventDefault(); const n = e.target.gname.value.trim(); if (!n) return; await addMember(n, false); e.target.reset(); toast(tr("ppl.added", { name: n })); } },
+    h("label", { class: "grow" }, tr("ppl.addLabel"), h("input", { id: "gname", name: "gname", placeholder: tr("ppl.namePh"), maxlength: 30 })), h("button", { type: "submit" }, tr("add")));
   const link = inviteLink(t.code);
-  out.push(h("div", { class: "panel" }, h("h2", { text: "People" }),
-    h("div", { class: "chips" }, ids.map(id => h("span", { class: "chip" + (id === mine ? " you" : "") }, memberName(t, id), !t.members[id].uid ? h("small", { text: "not joined" }) : null))),
-    h("div", {}, h("h3", { text: "Invite", style: "margin-bottom:6px" }),
+  out.push(h("div", { class: "panel" }, h("h2", { text: tr("ppl.title") }),
+    h("div", { class: "chips" }, ids.map(id => h("span", { class: "chip" + (id === mine ? " you" : "") }, memberName(t, id), !t.members[id].uid ? h("small", { text: tr("ppl.notJoined") }) : null))),
+    h("div", {}, h("h3", { text: tr("ppl.invite"), style: "margin-bottom:6px" }),
       h("div", { class: "linkbox" },
-        h("input", { id: "invlink", readonly: true, value: link, "aria-label": "Invite link", onfocus: e => e.target.select() }),
+        h("input", { id: "invlink", readonly: true, value: link, "aria-label": tr("ppl.inviteLink"), onfocus: e => e.target.select() }),
         h("button", { type: "button", onclick: async () => {
-          try { await navigator.clipboard.writeText(link); toast("Link copied"); }
-          catch { const i = document.getElementById("invlink"); i.focus(); i.select(); toast("Tap and hold to copy"); }
-        } }, "Copy")),
+          try { await navigator.clipboard.writeText(link); toast(tr("ppl.copied")); }
+          catch { const i = document.getElementById("invlink"); i.focus(); i.select(); toast(tr("ppl.holdToCopy")); }
+        } }, tr("copy"))),
       navigator.share ? h("button", { class: "primary", style: "margin-top:10px", onclick: async () => {
           try { await navigator.share({ url: link }); } catch {}
-        } }, "Share…") : null),
-    gform, h("button", { class: "ghost", style: "align-self:flex-start", onclick: () => { ui.joinPick = true; render(); } }, "Not you? Switch person")));
+        } }, tr("share")) : null),
+    gform, h("button", { class: "ghost", style: "align-self:flex-start", onclick: () => { ui.joinPick = true; render(); } }, tr("ppl.switch"))));
 
   if (t.createdBy === me.uid) {
     const n = cur.expenses.length;
     out.push(ui.confirmDelete === t.id
       ? h("div", { class: "panel danger" },
-          h("h2", { text: `Delete ${t.name}?` }),
-          h("p", { text: `This removes the trip${n ? ` and its ${n} ${n === 1 ? "expense" : "expenses"}` : ""} for everyone on it. This can't be undone.` }),
+          h("h2", { text: tr("del.title", { name: t.name }) }),
+          h("p", { text: tr("del.body", { extra: n ? tr("del.extra", { n }) : "" }) }),
           h("div", { class: "row" },
             h("button", { class: "danger-btn", onclick: async ev => {
-              ev.currentTarget.disabled = true; ev.currentTarget.textContent = "Deleting…";
-              try { const name = t.name; await deleteTrip(t); ui.confirmDelete = null; history.replaceState(null, "", location.pathname); render(); toast(name + " deleted"); }
-              catch { toast("Couldn't delete the trip. Try again."); ui.confirmDelete = null; render(); }
-            } }, "Delete trip"),
-            h("button", { onclick: () => { ui.confirmDelete = null; render(); } }, "Cancel")))
-      : h("button", { class: "ghost", style: "align-self:center;color:var(--danger)", onclick: () => { ui.confirmDelete = t.id; render(); } }, "Delete trip"));
+              ev.currentTarget.disabled = true; ev.currentTarget.textContent = tr("del.deleting");
+              try { const name = t.name; await deleteTrip(t); ui.confirmDelete = null; history.replaceState(null, "", location.pathname); render(); toast(tr("del.done", { name })); }
+              catch { toast(tr("del.failed")); ui.confirmDelete = null; render(); }
+            } }, tr("del.button")),
+            h("button", { onclick: () => { ui.confirmDelete = null; render(); } }, tr("cancel"))))
+      : h("button", { class: "ghost", style: "align-self:center;color:var(--danger)", onclick: () => { ui.confirmDelete = t.id; render(); } }, tr("del.button")));
   }
   return out;
 }
@@ -677,7 +715,7 @@ onAuthStateChanged(auth, async user => {
   if (!me) { render(); return; }
   watchTrips();
   const j = location.hash.match(/^#join-([A-Za-z0-9]{6})$/), tm = location.hash.match(/^#trip-([a-z0-9]+)$/);
-  if (j) { try { await joinByCode(j[1]); } catch (e) { render(); toast(e.message?.startsWith("No trip") ? e.message : "Couldn't join that trip."); } }
+  if (j) { try { await joinByCode(j[1]); } catch (e) { render(); toast(e.known ? e.message : tr("err.joinShort")); } }
   else if (tm) openTrip(tm[1]);
   else render();
 });

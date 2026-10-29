@@ -1,3 +1,7 @@
+/* Fonts are self-hosted (no requests to Google). Subset to Latin + Latin Extended; licences in fonts/. */
+@font-face{font-family:"Bricolage Grotesque";src:url(fonts/bricolage-grotesque.woff2) format("woff2");font-weight:500 700;font-stretch:100%;font-display:swap}
+@font-face{font-family:"Figtree";src:url(fonts/figtree.woff2) format("woff2");font-weight:400 600;font-display:swap}
+@font-face{font-family:"JetBrains Mono";src:url(fonts/jetbrains-mono-500.woff2) format("woff2");font-weight:500;font-display:swap}
 *,*::before,*::after{box-sizing:border-box}
 /* Layout: a single narrow column — trips list, then a trip "ticket" with balances, payback plan and expense ledger. */
 :root{
@@ -211,3 +215,11 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
 .muted.small{font-size:13px}
 .li.payment b{font-weight:600}
 .li.payment .num{color:var(--muted)}
+
+/* language toggle & legal pages */
+button.ghost.lang{font-family:var(--mono);font-size:12px;letter-spacing:.06em;padding:4px 7px;border:1px solid var(--line);border-radius:6px}
+.legal-links{display:flex;justify-content:center;gap:4px;font-size:13px;color:var(--muted);padding-top:8px}
+.legal-links a{color:var(--muted);text-decoration:underline;text-underline-offset:2px}
+.legal h1{font-size:26px}
+.legal h2{font-size:17px;margin:18px 0 6px}
+.legal p{margin:0 0 8px;line-height:1.55;overflow-wrap:anywhere}
