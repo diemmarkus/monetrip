@@ -200,7 +200,7 @@ const DICT = {
     "pay.allEven": "Alle sind quitt. Niemand muss etwas zahlen.",
     "pay.yourList": "Deine Überweisungen", "pay.youEven": "Du bist quitt: Du musst nichts zahlen und bekommst nichts.", "pay.others": "Die anderen",
 
-    "bal.title": "",
+    "bal.title": "Saldo",
     "bal.done": { one: "Fertig! Eine Überweisung reicht", other: "Fertig! {n} Überweisungen reichen" },
     "bal.alreadyEven": "Alle sind schon quitt", "bal.saveFailed": "Die Abrechnung konnte nicht gespeichert werden. Bitte nochmal versuchen.",
     "bal.settle": "Abrechnen", "bal.settleAgain": "Neu abrechnen",
