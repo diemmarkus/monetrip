@@ -3,11 +3,11 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signI
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, deleteField, FieldPath }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js?v=64";
-import { settle, balances } from "./settle.js?v=64";
-import { autoIcon, PICKS } from "./icons.js?v=64";
-import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=64";
-import { legalDoc } from "./legal.js?v=64";
+import { firebaseConfig } from "./firebase-config.js?v=65";
+import { settle, balances } from "./settle.js?v=65";
+import { autoIcon, PICKS } from "./icons.js?v=65";
+import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=65";
+import { legalDoc } from "./legal.js?v=65";
 
 const CURRENCIES = ["EUR","USD","GBP","CHF","CZK","HUF","PLN","TRY","SEK","NOK","DKK","JPY","CAD","AUD","THB"];
 const $ = (s, r = document) => r.querySelector(s);
@@ -147,6 +147,16 @@ async function claimMember(mid) {
 const normName = n => (n || "").normalize("NFC").trim().replace(/\s+/g, " ").toLocaleLowerCase();
 const memberWithName = (t, name) => Object.keys(t?.members || {}).find(id => normName(t.members[id].name) === normName(name));
 function nameTakenError(name) { return Object.assign(new Error(tr("ppl.nameTaken", { name: name.trim() })), { known: true }); }
+// Trip admin (the creator) removes someone. Only allowed while nobody's expenses involve them,
+// so removing a person never changes anyone else's balance.
+async function removeMember(t, id) {
+  const m = t.members[id], uses = cur.expenses.filter(e => e.paidBy === id || (e.split || []).includes(id)).length;
+  if (uses) { toast(tr("ppl.inExpenses", { name: m.name, n: uses })); return; }
+  const upd = { [`members.${id}`]: deleteField() };
+  if (m.uid && m.uid !== t.createdBy) upd.memberUids = (t.memberUids || []).filter(u => u !== m.uid);
+  try { await updateDoc(doc(db, "trips", t.id), upd); toast(tr("ppl.removed", { name: m.name })); }
+  catch { toast(tr("ppl.removeFailed")); }
+}
 async function addMember(name, withMe) {
   name = name.trim().replace(/\s+/g, " ");
   const clash = memberWithName(cur.trip, name);
@@ -784,7 +794,14 @@ function tripView() {
       h("button", { type: "button", class: "add-round", title: tr("ppl.addLabel"), "aria-label": tr("ppl.addLabel"), "aria-expanded": String(!!ui.addPerson),
         onclick: () => { ui.addPerson = !ui.addPerson; render(); if (ui.addPerson) document.getElementById("gname")?.focus(); } }, h("span", { "aria-hidden": "true", text: "+" }))),
     addForm,
-    h("div", { class: "chips" }, byName.map(id => h("span", { class: "chip" + (id === mine ? " you" : "") }, memberName(t, id), !t.members[id].uid ? h("small", { text: tr("ppl.notJoined") }) : null))),
+    h("div", { class: "chips" }, byName.map(id => h("span", { class: "chip" + (id === mine ? " you" : "") }, memberName(t, id), !t.members[id].uid ? h("small", { text: tr("ppl.notJoined") }) : null,
+      // The trip's admin can remove anyone but themselves: first tap asks, second tap removes.
+      t.createdBy === me.uid && id !== mine ? h("button", { type: "button", class: "chip-x", title: tr("ppl.remove", { name: memberName(t, id) }), "aria-label": tr("ppl.remove", { name: memberName(t, id) }),
+        onclick: ev => {
+          const b = ev.currentTarget, chip = b.parentNode;
+          if (!b.dataset.sure) { b.dataset.sure = "1"; chip.classList.add("confirm"); b.textContent = tr("ppl.removeSure"); setTimeout(() => { if (b.isConnected) { delete b.dataset.sure; chip.classList.remove("confirm"); b.textContent = "✕"; } }, 3000); return; }
+          b.disabled = true; removeMember(t, id);
+        } }, "✕") : null))),
     h("div", {}, h("h3", { text: tr("ppl.invite"), style: "margin-bottom:6px" }),
       h("div", { class: "linkbox" },
         h("input", { id: "invlink", readonly: true, value: link, "aria-label": tr("ppl.inviteLink"), onfocus: e => e.target.select() }),

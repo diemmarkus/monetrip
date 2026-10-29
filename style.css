@@ -308,3 +308,8 @@ button.ghost.lang{font-family:var(--mono);font-size:12px;letter-spacing:.06em;pa
 .linkbox .link-icon{display:grid;place-items:center;width:48px;padding:0;border:none;border-left:1px solid var(--line);border-radius:0;background:var(--surface);color:var(--ink);flex:none}
 .linkbox .link-icon:hover{background:var(--accent-soft)}
 .linkbox .link-icon.share{background:var(--accent);color:var(--accent-ink);border-left-color:var(--accent)}
+.chip-x{border:none;background:none;min-height:0;padding:0 0 0 2px;margin-right:-4px;color:var(--muted);font-size:12px;line-height:1;cursor:pointer;position:relative}
+.chip-x::after{content:"";position:absolute;inset:-10px -8px}
+.chip-x:hover{color:var(--danger)}
+.chip.confirm{background:color-mix(in srgb,var(--danger) 14%,var(--surface))}
+.chip.confirm .chip-x{color:var(--danger);font-weight:600;font-size:13px}

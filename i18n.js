@@ -110,6 +110,7 @@ const DICT = {
     "list.empty": "No expenses yet. Add the first one above, like the hotel or a dinner.",
 
     "guest.confirmTitle": "Are you {name}?", "guest.confirmBody": "This phone is still signed in as the guest {name}. Continue only if that's you; otherwise join with your own name.", "guest.continueAs": "Yes, I'm {name}", "guest.someoneElse": "No, I'm someone else",
+    "ppl.remove": "Remove {name}", "ppl.removeSure": "Remove?", "ppl.removed": "{name} removed", "ppl.removeFailed": "Couldn't remove them. Try again.", "ppl.inExpenses": "{name} is in {n} expense(s). Delete those or take {name} out of them first.",
     "ppl.added": "{name} added", "ppl.nameTaken": "There's already a {name} on this trip. Use another name, e.g. with an initial.", "ppl.addLabel": "Add someone who hasn't joined yet", "ppl.namePh": "Name",
     "ppl.title": "People", "ppl.notJoined": "not joined", "ppl.invite": "Invite", "ppl.inviteLink": "Invite link",
     "ppl.copied": "Link copied", "ppl.holdToCopy": "Tap and hold to copy", "ppl.switch": "Not you? Switch person",
@@ -229,6 +230,7 @@ const DICT = {
     "list.empty": "Noch keine Ausgaben. Trag gleich die erste ein, zum Beispiel das Hotel oder ein Abendessen.",
 
     "guest.confirmTitle": "Bist du {name}?", "guest.confirmBody": "Dieses Handy ist noch als Gast {name} angemeldet. Mach nur weiter, wenn du das bist – sonst tritt mit deinem eigenen Namen bei.", "guest.continueAs": "Ja, ich bin {name}", "guest.someoneElse": "Nein, ich bin jemand anderes",
+    "ppl.remove": "{name} entfernen", "ppl.removeSure": "Entfernen?", "ppl.removed": "{name} entfernt", "ppl.removeFailed": "Entfernen hat nicht geklappt. Versuch es nochmal.", "ppl.inExpenses": "{name} steckt noch in {n} Ausgabe(n). Lösch diese oder nimm {name} dort zuerst raus.",
     "ppl.added": "{name} hinzugefügt", "ppl.nameTaken": "{name} gibt es auf dieser Reise schon. Nimm einen anderen Namen, z. B. mit Initiale.", "ppl.addLabel": "Jemanden hinzufügen, der noch nicht dabei ist", "ppl.namePh": "Name",
     "ppl.title": "Mitreisende", "ppl.notJoined": "noch nicht dabei", "ppl.invite": "Einladen", "ppl.inviteLink": "Einladungslink",
     "ppl.copied": "Link kopiert", "ppl.holdToCopy": "Zum Kopieren lange drücken", "ppl.switch": "Nicht du? Person wechseln",
