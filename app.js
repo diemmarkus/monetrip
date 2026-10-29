@@ -550,13 +550,11 @@ function tripView() {
         h("span", { class: "head-right" },
           h("span", { class: "muted", text: tr("pay.left", { n: s.transfers.length }) }),
           h("button", { class: "icon-btn close-btn", title: tr("pay.close"), "aria-label": tr("pay.close"), onclick: async ev => {
-            // Hide straight away and save; Undo brings the plan back.
-            const before = s, panel = ev.currentTarget.closest(".panel");
+            // Hide straight away and save, without a confirmation toast.
+            const panel = ev.currentTarget.closest(".panel");
             panel.hidden = true;
-            try {
-              await updateDoc(doc(db, "trips", t.id), { settlement: null });
-              toast(tr("pay.closed"), { label: tr("undo"), run: () => updateDoc(doc(db, "trips", t.id), { settlement: before }).catch(() => toast(tr("pay.restoreFailed"))) });
-            } catch { panel.hidden = false; toast(tr("pay.closeFailed")); }
+            try { await updateDoc(doc(db, "trips", t.id), { settlement: null }); }
+            catch { panel.hidden = false; toast(tr("pay.closeFailed")); }
           } }, "✕"))),
       stale ? h("p", { class: "notice", text: tr("pay.stale") }) : null,
       s.transfers.length ? h("p", { class: "muted small", text: tr("pay.howItWorks") }) : null,
