@@ -69,7 +69,10 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .icon-btn{display:inline-grid;place-items:center;min-height:36px;width:36px;padding:0;border:none;border-radius:8px;background:transparent;color:inherit;opacity:.8;flex:0 0 auto}
 .icon-btn:hover{opacity:1;background:rgba(255,255,255,.15)}
 .rename{display:flex;flex-direction:column;gap:8px;margin-top:4px}
-.rename input{background:var(--surface);font-family:var(--display);font-size:20px;font-weight:600}
+/* The trip card is cyan in both themes, so its rename field uses fixed light-on-cyan colours rather than theme surfaces. */
+.rename input{background:#fff;color:var(--accent-ink);border:2px solid var(--accent-ink);caret-color:var(--accent-ink);font-family:var(--display);font-size:20px;font-weight:600}
+.rename input::selection{background:var(--accent-ink);color:#fff}
+.rename input:focus-visible{outline:2px solid var(--accent-ink);outline-offset:2px}
 .rename-actions{display:flex;gap:8px}
 button.on-accent{background:var(--accent-ink);color:var(--accent);border-color:var(--accent-ink)}
 button.ghost.on-accent{background:none;color:var(--accent-ink);border-color:transparent}
