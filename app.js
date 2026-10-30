@@ -3,11 +3,11 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signI
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, deleteField, FieldPath }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js?v=71";
-import { settle, balances } from "./settle.js?v=71";
-import { autoIcon, PICKS } from "./icons.js?v=71";
-import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=71";
-import { legalDoc } from "./legal.js?v=71";
+import { firebaseConfig } from "./firebase-config.js?v=73";
+import { settle, balances } from "./settle.js?v=73";
+import { autoIcon, PICKS } from "./icons.js?v=73";
+import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=73";
+import { legalDoc } from "./legal.js?v=73";
 
 const CURRENCIES = ["EUR","USD","GBP","CHF","CZK","HUF","PLN","TRY","SEK","NOK","DKK","JPY","CAD","AUD","THB"];
 const $ = (s, r = document) => r.querySelector(s);
@@ -481,7 +481,10 @@ function render() {
   // The expense form keeps its values across redraws only once someone has touched it;
   // an untouched form is rebuilt from fresh defaults (last split / payer, which depend on loaded expenses).
   const oldX = app.querySelector(".xform"), keepX = oldX?.dataset.dirty === "1";
-  for (const el of app.querySelectorAll("input[id],select[id]")) if (keepX || !oldX?.contains(el)) saved[el.id] = el.type === "checkbox" ? el.checked : el.value;
+  for (const el of app.querySelectorAll("input[id],select[id]")) {
+    if (el.id.startsWith("xf")) continue; // filter fields are drawn from ui state, never restored
+    if (keepX || !oldX?.contains(el)) saved[el.id] = el.type === "checkbox" ? el.checked : el.value;
+  }
   app.replaceChildren(...(ui.legal ? legalView(ui.legal) : !me ? signInView() : ui.guestConfirm ? guestConfirmView() : cur.id ? tripView() : homeView()), legalFooter());
   const sp = document.getElementById("splash");
   if (sp && !sp.classList.contains("done")) { sp.classList.add("done"); setTimeout(() => sp.remove(), 400); }
@@ -811,8 +814,12 @@ function tripView() {
   });
   const filtering = !!(fq || fp || fk);
   const shareOf = id => e => { const b = Math.round(e.amount * (e.rate || 1) * 100), n = (e.split || []).length || 1; return (e.split || []).includes(id) ? b / n : 0; };
-  const listSpend = list.filter(e => e.kind !== "payment");
-  const listTotal = listSpend.reduce((sum, e) => sum + (fp ? shareOf(fp)(e) : Math.round(e.amount * (e.rate || 1) * 100)), 0);
+  // What a row adds to the totals: payments only when viewing payments (they aren't spending);
+  // with a person picked, their share of each expense, or the full payment they sent or got.
+  const full = e => Math.round(e.amount * (e.rate || 1) * 100);
+  const counts = e => fk === "pay" ? e.kind === "payment" : e.kind !== "payment";
+  const amountOf = e => !counts(e) ? 0 : e.kind === "payment" || !fp ? full(e) : shareOf(fp)(e);
+  const listTotal = list.reduce((sum, e) => sum + amountOf(e), 0);
   const setF = (k, v) => { ui[k] = v; render(); };
   const filterBar = cur.expenses.length ? h("div", { class: "filters" },
     h("input", { id: "xfq", type: "search", placeholder: tr("filter.search"), "aria-label": tr("filter.search"), value: ui.fq || "", autocomplete: "off",
@@ -824,7 +831,7 @@ function tripView() {
       h("select", { id: "xfk", "aria-label": tr("filter.kind"), onchange: e => setF("fk", e.target.value) },
         [["", "filter.all"], ["spend", "filter.spend"], ["pay", "filter.pay"]].map(([v, k]) => h("option", { value: v, selected: v === fk, text: tr(k) })))),
     filtering ? h("div", { class: "filter-sum" },
-      h("span", { text: tr("filter.count", { n: list.length, total: cur.expenses.length }) + " · " + (fp ? tr("filter.shareOf", { name: memberName(t, fp) }) : "") }),
+      h("span", { text: tr("filter.count", { n: list.length, total: cur.expenses.length }) + " · " + (fp && fk !== "pay" ? tr("filter.shareOf", { name: memberName(t, fp) }) : "") }),
       h("b", { class: "num", text: money(Math.round(listTotal), ccy) }),
       h("button", { type: "button", class: "ghost", onclick: () => { ui.fq = ""; ui.fp = ""; ui.fk = ""; render(); } }, tr("filter.clear"))) : null) : null;
   out.push(h("div", { class: "panel" },
@@ -852,7 +859,7 @@ function tripView() {
       attachSwipe(row, fg, { left: () => deleteExpense(t, e), right: own ? () => startEdit(e) : null });
       const key = dayKey(e);
       if (i > 0 && dayKey(list[i - 1]) === key) return [row];
-      const dayTotal = list.filter(x => dayKey(x) === key && x.kind !== "payment").reduce((sum, x) => sum + (fp ? shareOf(fp)(x) : Math.round(x.amount * (x.rate || 1) * 100)), 0);
+      const dayTotal = list.filter(x => dayKey(x) === key).reduce((sum, x) => sum + amountOf(x), 0);
       return [h("div", { class: "day" }, h("span", { text: dayLabel(key) }), h("span", { class: "num", text: money(Math.round(dayTotal), ccy) })), row];
     }))));
 
