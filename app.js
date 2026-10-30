@@ -3,11 +3,11 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signI
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, deleteField, FieldPath }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js?v=75";
-import { settle, balances } from "./settle.js?v=75";
-import { autoIcon, PICKS } from "./icons.js?v=75";
-import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=75";
-import { legalDoc } from "./legal.js?v=75";
+import { firebaseConfig } from "./firebase-config.js?v=76";
+import { settle, balances } from "./settle.js?v=76";
+import { autoIcon, PICKS } from "./icons.js?v=76";
+import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=76";
+import { legalDoc } from "./legal.js?v=76";
 
 const CURRENCIES = ["EUR","USD","GBP","CHF","CZK","HUF","PLN","TRY","SEK","NOK","DKK","JPY","CAD","AUD","THB"];
 const $ = (s, r = document) => r.querySelector(s);
@@ -819,11 +819,14 @@ function tripView() {
   /* expenses */
   const hasOwn = cur.expenses.some(e => e.by === mine && e.kind !== "payment");
   // Filters (this device only): text search, person (paid by or shares in), kind.
-  const fq = normName(ui.fq || ""), fp = ui.fp && t.members[ui.fp] ? ui.fp : "", fk = ui.fk || "";
+  const fq = normName(ui.fq || ""), fp = ui.fp && t.members[ui.fp] ? ui.fp : "", fk = ["paid", "for", "pay"].includes(ui.fk) ? ui.fk : "";
+  // "Paid by" / "Paid for" are about the picked person, or about you when the person filter is Everyone.
+  const who = fp || mine;
   const list = cur.expenses.filter(e => {
     const isPay = e.kind === "payment";
-    if (fk === "spend" && isPay) return false;
     if (fk === "pay" && !isPay) return false;
+    if (fk === "paid" && (isPay || e.paidBy !== who)) return false;
+    if (fk === "for" && (isPay || e.paidBy === who || !(e.split || []).includes(who))) return false;
     if (fp && !(e.paidBy === fp || (e.split || []).includes(fp))) return false;
     if (fq && !normName(isPay ? `${memberName(t, e.paidBy)} ${memberName(t, e.split[0])}` : e.desc).includes(fq)) return false;
     return true;
@@ -834,7 +837,8 @@ function tripView() {
   // with a person picked, their share of each expense, or the full payment they sent or got.
   const full = e => Math.round(e.amount * (e.rate || 1) * 100);
   const counts = e => fk === "pay" ? e.kind === "payment" : e.kind !== "payment";
-  const amountOf = e => !counts(e) ? 0 : e.kind === "payment" || !fp ? full(e) : shareOf(fp)(e);
+  // Paid by: the full amounts they paid. Paid for: their share of what others paid.
+  const amountOf = e => !counts(e) ? 0 : e.kind === "payment" || fk === "paid" ? full(e) : fk === "for" ? shareOf(who)(e) : !fp ? full(e) : shareOf(fp)(e);
   const listTotal = list.reduce((sum, e) => sum + amountOf(e), 0);
   const setF = (k, v) => { ui[k] = v; render(); };
   const filterOpen = !!ui.filterOpen;
@@ -846,9 +850,10 @@ function tripView() {
         h("option", { value: "", text: tr("filter.everyone") }),
         byName.map(id => h("option", { value: id, selected: id === fp, text: memberName(t, id) + (id === mine ? tr("youSuffix") : "") }))),
       h("select", { id: "xfk", "aria-label": tr("filter.kind"), onchange: e => setF("fk", e.target.value) },
-        [["", "filter.all"], ["spend", "filter.spend"], ["pay", "filter.pay"]].map(([v, k]) => h("option", { value: v, selected: v === fk, text: tr(k) })))) : null,
+        [["", "filter.all"], ["paid", fp ? "filter.paidBy" : "filter.paidByYou"], ["for", fp ? "filter.paidFor" : "filter.paidForYou"], ["pay", "filter.pay"]]
+          .map(([v, k]) => h("option", { value: v, selected: v === fk, text: tr(k, { name: fp ? memberName(t, fp) : "" }) })))) : null,
     filtering ? h("div", { class: "filter-sum" },
-      h("span", { text: tr("filter.count", { n: list.length, total: cur.expenses.length }) + " · " + (fp && fk !== "pay" ? tr("filter.shareOf", { name: memberName(t, fp) }) : "") }),
+      h("span", { text: tr("filter.count", { n: list.length, total: cur.expenses.length }) + " · " + ((fp && !fk) || fk === "for" ? (fp ? tr("filter.shareOf", { name: memberName(t, fp) }) : tr("filter.yourShare")) : "") }),
       h("b", { class: "num", text: money(Math.round(listTotal), ccy) }),
       h("button", { type: "button", class: "ghost", onclick: () => { ui.fq = ""; ui.fp = ""; ui.fk = ""; render(); } }, tr("filter.clear"))) : null) : null;
   const filterBtn = h("button", { type: "button", class: "add-round filter-btn" + (filtering ? " active" : ""), title: tr("filter.toggle"), "aria-label": tr("filter.toggle"),

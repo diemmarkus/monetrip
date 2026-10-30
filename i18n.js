@@ -99,8 +99,8 @@ const DICT = {
     "x.nobody": "Nobody yet", "x.everyone": "Everyone ({n})", "x.justYou": "Just you",
 
     "filter.search": "Search expenses", "filter.person": "Person", "filter.everyone": "Everyone", "filter.kind": "Type",
-    "filter.all": "All", "filter.spend": "Expenses", "filter.pay": "Payments", "filter.clear": "Clear", "filter.toggle": "Filter expenses",
-    "filter.count": "{n} of {total}", "filter.shareOf": "{name}'s share ", "filter.none": "Nothing matches these filters.",
+    "filter.all": "Everything", "filter.paidBy": "Paid by {name}", "filter.paidFor": "Paid for {name}", "filter.paidByYou": "Paid by you", "filter.paidForYou": "Paid for you", "filter.pay": "Payments", "filter.clear": "Clear", "filter.toggle": "Filter expenses",
+    "filter.count": "{n} of {total}", "filter.shareOf": "{name}'s share ", "filter.yourShare": "your share ", "filter.none": "Nothing matches these filters.",
     "list.title": "Expenses",
     "list.swipeBoth": "Swipe ← to delete · → to edit yours", "list.swipeDel": "Swipe ← to delete",
     "list.ariaEdit": "Press E to edit, ", "list.ariaDel": "Delete key to delete.",
@@ -223,8 +223,8 @@ const DICT = {
     "x.nobody": "Noch niemand", "x.everyone": "Alle ({n})", "x.justYou": "Nur du",
 
     "filter.search": "Ausgaben durchsuchen", "filter.person": "Person", "filter.everyone": "Alle Personen", "filter.kind": "Art",
-    "filter.all": "Alles", "filter.spend": "Ausgaben", "filter.pay": "Zahlungen", "filter.clear": "Zurücksetzen", "filter.toggle": "Ausgaben filtern",
-    "filter.count": "{n} von {total}", "filter.shareOf": "Anteil {name} ", "filter.none": "Nichts passt zu diesen Filtern.",
+    "filter.all": "Alles", "filter.paidBy": "Bezahlt von {name}", "filter.paidFor": "Bezahlt für {name}", "filter.paidByYou": "Von dir bezahlt", "filter.paidForYou": "Für dich bezahlt", "filter.pay": "Zahlungen", "filter.clear": "Zurücksetzen", "filter.toggle": "Ausgaben filtern",
+    "filter.count": "{n} von {total}", "filter.shareOf": "Anteil {name} ", "filter.yourShare": "dein Anteil ", "filter.none": "Nichts passt zu diesen Filtern.",
     "list.title": "Ausgaben",
     "list.swipeBoth": "← Löschen · → Bearbeiten", "list.swipeDel": "← Löschen",
     "list.ariaEdit": "E zum Bearbeiten, ", "list.ariaDel": "Entf zum Löschen.",
