@@ -3,11 +3,11 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signI
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, deleteField, FieldPath }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js?v=74";
-import { settle, balances } from "./settle.js?v=74";
-import { autoIcon, PICKS } from "./icons.js?v=74";
-import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=74";
-import { legalDoc } from "./legal.js?v=74";
+import { firebaseConfig } from "./firebase-config.js?v=75";
+import { settle, balances } from "./settle.js?v=75";
+import { autoIcon, PICKS } from "./icons.js?v=75";
+import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=75";
+import { legalDoc } from "./legal.js?v=75";
 
 const CURRENCIES = ["EUR","USD","GBP","CHF","CZK","HUF","PLN","TRY","SEK","NOK","DKK","JPY","CAD","AUD","THB"];
 const $ = (s, r = document) => r.querySelector(s);
@@ -572,6 +572,22 @@ function homeView() {
   return [brand(), h("h1", { text: tr("home.yourTrips") }), list, me.isAnonymous ? guestNote : createForm, joinForm];
 }
 
+// Typing in the search box must not replace the box itself: a fresh input mid-word breaks the
+// phone keyboard's composition (Gboard doubled/jumbled letters). So redraw only the expenses panel
+// around the live input, keeping it (and its focus, caret and composition) untouched.
+function refreshExpenses() {
+  const live = document.getElementById("xpanel"), keep = document.getElementById("xfq");
+  const fresh = h("div", {}, ...tripView()).querySelector("#xpanel");
+  if (!live || !keep || !fresh?.querySelector("#xfq")) return render();
+  (function swap(liveEl, freshEl) {
+    const keepChild = [...liveEl.children].find(c => c === keep || c.contains(keep));
+    const freshKids = [...freshEl.childNodes], i = freshKids.findIndex(c => c.nodeType === 1 && (c.id === "xfq" || c.querySelector("#xfq")));
+    for (const c of [...liveEl.childNodes]) if (c !== keepChild) c.remove();
+    keepChild.before(...freshKids.slice(0, i)); keepChild.after(...freshKids.slice(i + 1));
+    if (keepChild !== keep) swap(keepChild, freshKids[i]);
+  })(live, fresh);
+  saveSnapshot();
+}
 function tripView() {
   const t = cur.trip, back = h("button", { class: "back", onclick: goHome }, tr("trip.allTrips"));
   if (!t) return [brand(), back, h("div", { class: "panel" }, h("p", { class: "muted", text: cur.missing ? tr("trip.missing") : tr("trip.loading") }))];
@@ -824,7 +840,7 @@ function tripView() {
   const filterOpen = !!ui.filterOpen;
   const filterBar = cur.expenses.length && (filterOpen || filtering) ? h("div", { class: "filters" },
     filterOpen ? h("input", { id: "xfq", type: "search", placeholder: tr("filter.search"), "aria-label": tr("filter.search"), value: ui.fq || "", autocomplete: "off",
-      oninput: e => setF("fq", e.target.value) }) : null,
+      oninput: e => { ui.fq = e.target.value; refreshExpenses(); } }) : null,
     filterOpen ? h("div", { class: "pair" },
       h("select", { id: "xfp", "aria-label": tr("filter.person"), onchange: e => setF("fp", e.target.value) },
         h("option", { value: "", text: tr("filter.everyone") }),
@@ -838,7 +854,7 @@ function tripView() {
   const filterBtn = h("button", { type: "button", class: "add-round filter-btn" + (filtering ? " active" : ""), title: tr("filter.toggle"), "aria-label": tr("filter.toggle"),
     "aria-expanded": String(filterOpen), onclick: () => { ui.filterOpen = !filterOpen; render(); if (ui.filterOpen) document.getElementById("xfq")?.focus(); } });
   filterBtn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8.5V19l-4 2v-7.5Z"/></svg>';
-  out.push(h("div", { class: "panel" },
+  out.push(h("div", { class: "panel", id: "xpanel" },
     h("div", { class: "top" }, h("h2", { text: tr("list.title") }),
       cur.expenses.length ? filterBtn : null),
     cur.expenses.length ? h("div", { class: "hint", text: hasOwn ? tr("list.swipeBoth") : tr("list.swipeDel") }) : null,
