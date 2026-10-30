@@ -302,6 +302,10 @@ button.ghost.lang{font-family:var(--mono);font-size:12px;letter-spacing:.06em;pa
 .add-round span{transform:translateY(-1px)}
 .add-round[aria-expanded="true"] span{transform:rotate(45deg)}
 @media (prefers-reduced-motion:no-preference){.add-round span{transition:transform .15s}}
+.filter-btn{position:relative}
+.top+.hint{margin-top:-10px}
+.filter-btn svg{transform:translateY(1px)}
+.filter-btn.active::after{content:"";position:absolute;top:1px;right:1px;width:10px;height:10px;border-radius:50%;background:var(--bar-neg);box-shadow:0 0 0 2px var(--surface)}
 .add-person{display:flex;gap:8px;align-items:center}
 .add-person input{flex:1 1 auto;min-width:0}
 .add-person .close-btn{flex:none}
