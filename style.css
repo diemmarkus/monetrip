@@ -315,3 +315,9 @@ button.ghost.lang{font-family:var(--mono);font-size:12px;letter-spacing:.06em;pa
 .chip.confirm .chip-x{color:var(--danger);font-weight:600;font-size:13px}
 /* Start-up snapshot on screen: wait for the sign-in check before accepting taps */
 html.booting #app button,html.booting #app input,html.booting #app select,html.booting #app .swipe,html.booting #app .trip{pointer-events:none}
+.filters{display:flex;flex-direction:column;gap:8px}
+.filters input[type=search]{min-height:40px;padding:7px 10px}
+.filters select{min-height:40px;padding:7px 10px}
+.filter-sum{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.filter-sum b{color:var(--ink);margin-right:auto}
+.filter-sum button{min-height:32px;padding:4px 8px;color:var(--accent-text)}
