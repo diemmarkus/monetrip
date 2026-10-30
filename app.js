@@ -3,11 +3,11 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signI
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, deleteField, FieldPath }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js?v=67";
-import { settle, balances } from "./settle.js?v=67";
-import { autoIcon, PICKS } from "./icons.js?v=67";
-import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=67";
-import { legalDoc } from "./legal.js?v=67";
+import { firebaseConfig } from "./firebase-config.js?v=68";
+import { settle, balances } from "./settle.js?v=68";
+import { autoIcon, PICKS } from "./icons.js?v=68";
+import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=68";
+import { legalDoc } from "./legal.js?v=68";
 
 const CURRENCIES = ["EUR","USD","GBP","CHF","CZK","HUF","PLN","TRY","SEK","NOK","DKK","JPY","CAD","AUD","THB"];
 const $ = (s, r = document) => r.querySelector(s);
@@ -317,7 +317,13 @@ function googleSignIn() {
   return signInWithPopup(auth, p).catch(e => { if (e.code === "auth/popup-blocked") signInWithRedirect(auth, p); else if (e.code !== "auth/popup-closed-by-user") toast(tr("auth.signInFailed")); });
 }
 async function saveWithGoogle() {
-  try { const r = await linkWithPopup(me, new GoogleAuthProvider()); me = r.user; toast(tr("auth.saved")); render(); }
+  try {
+    const r = await linkWithPopup(me, new GoogleAuthProvider()); me = r.user;
+    // Linking keeps the guest's profile; take Google's name and photo.
+    const g = (me.providerData || []).find(p => p?.providerId === "google.com");
+    if (g && (g.photoURL || g.displayName)) await updateProfile(me, { photoURL: g.photoURL || me.photoURL, displayName: g.displayName || me.displayName }).catch(() => {});
+    toast(tr("auth.saved")); render();
+  }
   catch (e) {
     if (e.code === "auth/credential-already-in-use") toast(tr("auth.googleInUse"));
     else if (e.code !== "auth/popup-closed-by-user") toast(tr("auth.googleFailed"));
@@ -332,10 +338,18 @@ function initials(name) {
   const parts = (name || "").trim().split(/\s+/).filter(Boolean);
   return ((parts[0]?.[0] || "") + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase() || "?";
 }
+// Google's photo can sit in the provider data only (accounts that started as a guest and were
+// saved with Google keep the guest profile), so look there too.
+const googlePhoto = () => me?.photoURL || (me?.providerData || []).find(p => p?.photoURL)?.photoURL || "";
 function avatar(size) {
   const guest = me?.isAnonymous, name = guest ? firstName() : (me?.displayName || me?.email || "");
-  if (me?.photoURL && !guest) return h("img", { class: "avatar", src: me.photoURL, alt: "", width: size, height: size, referrerpolicy: "no-referrer" });
-  return h("span", { class: "avatar" + (guest ? " guest" : ""), "aria-hidden": "true", text: initials(name) });
+  const fallback = () => h("span", { class: "avatar" + (guest ? " guest" : ""), "aria-hidden": "true", text: initials(name) });
+  const photo = guest ? "" : googlePhoto();
+  if (!photo) return fallback();
+  // If the photo can't load (offline, Google rate-limiting its image server), show initials instead of an empty circle.
+  const img = h("img", { class: "avatar", src: photo, alt: "", width: size, height: size, referrerpolicy: "no-referrer" });
+  img.addEventListener("error", () => img.replaceWith(fallback()), { once: true });
+  return img;
 }
 /* ---------- theme: system (default), light or dark ---------- */
 function getTheme() { try { return localStorage.getItem("mt-theme") || "system"; } catch { return "system"; } }
@@ -425,7 +439,7 @@ function saveSnapshot() {
   snapTimer = setTimeout(() => {
     try {
       const withTrip = cur.id && cur.trip;
-      localStorage.setItem(SNAP_KEY, JSON.stringify({ uid: me.uid, name: me.displayName || "", photo: me.photoURL || "", email: me.email || "", anon: !!me.isAnonymous,
+      localStorage.setItem(SNAP_KEY, JSON.stringify({ uid: me.uid, name: me.displayName || "", photo: googlePhoto(), email: me.email || "", anon: !!me.isAnonymous,
         trips, tripId: withTrip ? cur.id : null, trip: withTrip ? cur.trip : null, expenses: withTrip ? cur.expenses : [] }));
     } catch {}
   }, 500);
