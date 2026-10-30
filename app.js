@@ -3,11 +3,11 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signI
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, deleteField, FieldPath }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js?v=68";
-import { settle, balances } from "./settle.js?v=68";
-import { autoIcon, PICKS } from "./icons.js?v=68";
-import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=68";
-import { legalDoc } from "./legal.js?v=68";
+import { firebaseConfig } from "./firebase-config.js?v=69";
+import { settle, balances } from "./settle.js?v=69";
+import { autoIcon, PICKS } from "./icons.js?v=69";
+import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=69";
+import { legalDoc } from "./legal.js?v=69";
 
 const CURRENCIES = ["EUR","USD","GBP","CHF","CZK","HUF","PLN","TRY","SEK","NOK","DKK","JPY","CAD","AUD","THB"];
 const $ = (s, r = document) => r.querySelector(s);
@@ -901,6 +901,9 @@ onAuthStateChanged(auth, async user => {
   const keep = booting && user && user.uid === me?.uid; // the snapshot on screen belongs to this user
   if (booting) { booting = false; document.documentElement.classList.remove("booting"); if (!keep) closeTrip(); }
   me = user; unsubTrips?.();
+  // Accounts saved with Google before that copied Google's name and photo: repair once.
+  const g = user && !user.isAnonymous && (user.providerData || []).find(p => p?.providerId === "google.com");
+  if (g && g.photoURL && !user.photoURL) updateProfile(user, { photoURL: g.photoURL, displayName: g.displayName || user.displayName }).then(() => render()).catch(() => {});
   if (!keep) { trips = []; tripsLoaded = false; }
   if (!me) { clearSnapshot(); render(); return; }
   watchTrips();
