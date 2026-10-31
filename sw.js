@@ -20,6 +20,8 @@ self.addEventListener("activate", e => {
     .then(() => self.clients.claim()));
 });
 
+const ROOT = new URL("./", location).pathname; // "/monetrip/"
+const APP_PAGES = new Set([ROOT, ROOT + "index.html"]);
 const FIREBASE_SDK = /^https:\/\/www\.gstatic\.com\/firebasejs\/\d/;
 const STATIC_EXT = /\.(js|css|woff2|png|svg|ico|webmanifest)$/;
 
@@ -28,7 +30,9 @@ self.addEventListener("fetch", e => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
 
-  if (req.mode === "navigate" && url.origin === location.origin) { e.respondWith(pageCachedThenRefresh(e)); return; }
+  // Only the app's own page; other pages on this site (e.g. the /preview/ try-out copy) load as usual.
+  if (req.mode === "navigate") { if (url.origin === location.origin && APP_PAGES.has(url.pathname)) e.respondWith(pageCachedThenRefresh(e)); return; }
+  if (url.pathname.startsWith(ROOT + "preview/")) return; // the try-out copy is never cached
   if (FIREBASE_SDK.test(req.url)) { e.respondWith(cacheFirst(req)); return; }
   if (url.origin !== location.origin || !STATIC_EXT.test(url.pathname)) return; // data, APIs: browser as usual
   if (url.searchParams.has("v") || url.pathname.includes("/fonts/")) e.respondWith(cacheFirst(req, true));

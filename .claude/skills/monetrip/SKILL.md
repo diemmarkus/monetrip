@@ -95,6 +95,13 @@ Money inside the app is integer **cents** in the trip currency: `Math.round(amou
 6. If `firestore.rules` changed, give Markus the full rules block to paste into
    Firebase console → Firestore → Rules → Publish.
 
+## Try-out previews
+
+Markus can try a branch on his phone before it goes live: `tools/make-preview.sh <branch>` copies it into
+`preview/` on main → https://diemmarkus.github.io/monetrip/preview/ (no service worker, noindex; the live
+`sw.js` ignores `/preview/`). It uses the **real** Firebase project and data. Re-run the script after
+pushing more commits to the branch; `tools/make-preview.sh --remove` takes it down once merged.
+
 ## Testing
 
 `tools/test/smoke.js` loads the real app with Playwright, swapping the Firebase SDK for the fakes in
