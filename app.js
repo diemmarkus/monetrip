@@ -3,11 +3,11 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signI
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, deleteField, FieldPath }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js?v=99";
-import { settle, balances } from "./settle.js?v=99";
-import { autoIcon, PICKS, categoryOf, CAT_ICON } from "./icons.js?v=99";
-import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=99";
-import { legalDoc } from "./legal.js?v=99";
+import { firebaseConfig } from "./firebase-config.js?v=100";
+import { settle, balances } from "./settle.js?v=100";
+import { autoIcon, PICKS, categoryOf, CAT_ICON } from "./icons.js?v=100";
+import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=100";
+import { legalDoc } from "./legal.js?v=100";
 
 const CURRENCIES = ["EUR","USD","GBP","CHF","CZK","HUF","PLN","TRY","SEK","NOK","DKK","JPY","CAD","AUD","THB"];
 const $ = (s, r = document) => r.querySelector(s);
@@ -1093,8 +1093,10 @@ function analyticsMore(t, spends, cats, total, people, base, label, pct) {
     tile(tr("ana.biggest"), money(base(biggest), ccy), biggest.desc)));
 
   // All categories, nothing folded.
-  // Only real categories here; the pie's "Other" is a fold of these plus untagged expenses, so it would read differently.
-  const bySum = cats.filter(c => c.key !== "other").sort((a, b) => b.sum - a.sum);
+  // Every category, biggest first; "Other" here holds only the expenses no category fits (always last, grey),
+  // unlike the pie's "Other", which also folds in the small categories.
+  const bySum = [...cats].sort((a, b) => (a.key === "other") - (b.key === "other") || b.sum - a.sum);
+  const maxSum = Math.max(...bySum.map(c => c.sum));
   // Tap a category to unfold its expenses (newest first); tap again to fold.
   const catOpen = bySum.some(c => c.key === ui.anaCat) ? ui.anaCat : null;
   const catItems = c => spends.filter(e => categoryOf(iconFor(t, e)) === c.key)
@@ -1110,7 +1112,7 @@ function analyticsMore(t, spends, cats, total, people, base, label, pct) {
         onclick: () => { ui.anaCat = open ? null : c.key; render(); } },
       h("span", {}, h("span", { "aria-hidden": "true", text: CAT_ICON[c.key] + " " }), h("b", { text: label(c) }), h("span", { class: "muted", text: " · " + tr("ana.count", { n: c.n }) })),
       h("span", { class: "cat-amt" }, h("span", { class: "num", text: money(c.sum, ccy) }), h("span", { class: "chev" + (open ? " up" : ""), "aria-hidden": "true" })),
-      h("div", { class: "bar" }, h("i", { style: `width:${c.sum / bySum[0].sum * 100}%;background:${c.color}` }))),
+      h("div", { class: "bar" }, h("i", { style: `width:${c.sum / maxSum * 100}%;background:${c.color}` }))),
       open ? h("div", { class: "cat-items" }, catItems(c)) : null];
   })));
 
