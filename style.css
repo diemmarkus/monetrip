@@ -12,17 +12,20 @@
   --display:"Plus Jakarta Sans",ui-sans-serif,system-ui,sans-serif;
   --body:"Figtree",ui-sans-serif,system-ui,sans-serif;
   --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --cat-1:#2a78d6; --cat-2:#eb6834; --cat-3:#1baf7a; --cat-4:#eda100; --cat-5:#e87ba4; --cat-6:#008300; --cat-7:#6250d6; --cat-8:#e34948; --cat-other:#a3aeaa;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#0f1715; --surface:#17221f; --ink:#e6eeeb; --muted:#93a39e; --line:#2a3834;
   --accent:#34e5eb; --accent-ink:#03363a; --accent-soft:#0f3a3d; --accent-text:#34e5eb;
   --bar-pos:#34e5eb; --bar-neg:#ed9726; --danger:#f08a7e;
-  --owe:#ed9726; --get:#34e5eb; --warn:#e7bb57; --warn-soft:#352c14; color-scheme:dark}}
+  --owe:#ed9726; --get:#34e5eb; --warn:#e7bb57; --warn-soft:#352c14; color-scheme:dark;
+  --cat-1:#3987e5; --cat-2:#d95926; --cat-3:#199e70; --cat-4:#c98500; --cat-5:#d55181; --cat-6:#008300; --cat-7:#9085e9; --cat-8:#e66767; --cat-other:#5b6b66;}}
 :root[data-theme="dark"]{
   --bg:#0f1715; --surface:#17221f; --ink:#e6eeeb; --muted:#93a39e; --line:#2a3834;
   --accent:#34e5eb; --accent-ink:#03363a; --accent-soft:#0f3a3d; --accent-text:#34e5eb;
   --bar-pos:#34e5eb; --bar-neg:#ed9726; --danger:#f08a7e;
-  --owe:#ed9726; --get:#34e5eb; --warn:#e7bb57; --warn-soft:#352c14; color-scheme:dark}
+  --owe:#ed9726; --get:#34e5eb; --warn:#e7bb57; --warn-soft:#352c14; color-scheme:dark;
+  --cat-1:#3987e5; --cat-2:#d95926; --cat-3:#199e70; --cat-4:#c98500; --cat-5:#d55181; --cat-6:#008300; --cat-7:#9085e9; --cat-8:#e66767; --cat-other:#5b6b66;}
 body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--body)}
 .wrap{max-width:720px;margin:0 auto;padding-block:24px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:20px}
 h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;line-height:1.15}
@@ -337,3 +340,36 @@ html.booting #app button:not(.trip):not(.back),html.booting #app input,html.boot
 .filter-sum{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
 .filter-sum b{color:var(--ink);margin-right:auto}
 .filter-sum button{min-height:32px;padding:4px 8px;color:var(--accent-text)}
+
+/* Analytics: donut + legend; "More" unfolds tiles, all categories, per-day bars and the biggest expenses. */
+.ana-main{display:grid;grid-template-columns:minmax(130px,170px) 1fr;gap:16px;align-items:center}
+@media (max-width:420px){.ana-main{grid-template-columns:1fr}.pie{max-width:200px;justify-self:center}}
+.pie{position:relative;width:100%;aspect-ratio:1}
+.pie svg{width:100%;height:100%;display:block}
+.pie .slice{cursor:pointer;transition:opacity .15s}
+.pie .slice.dim,.leg.dim{opacity:.35}
+.pie-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;text-align:center;padding:24%}
+.pie-center b{font-size:15px}
+.pie-center span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.legend{display:flex;flex-direction:column;min-width:0}
+.leg{display:grid;grid-template-columns:10px 1fr auto 3.2em;gap:8px;align-items:center;background:none;border:none;border-radius:8px;padding:7px 6px;margin:0 -6px;text-align:left;color:var(--ink);font:inherit;font-size:14px;cursor:pointer}
+.leg.on{background:var(--accent-soft)}
+.leg .dot{width:10px;height:10px;border-radius:3px}
+.leg-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.leg .pct{text-align:right;font-size:12px}
+.unfold{align-self:center;display:inline-flex;align-items:center;gap:8px;color:var(--accent-text);font-weight:600}
+.unfold .chev.up{transform:translateY(2px) rotate(-135deg)}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tile{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);min-width:0}
+.tile b{font-size:15px}
+.tile .ell{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:420px){.tile{padding:8px 9px}.tile b{font-size:13px}}
+.ana h3{margin-top:6px}
+.ana .cats .li{grid-template-columns:1fr auto}
+.days{display:flex;align-items:flex-end;gap:2px;height:110px;border-bottom:1px solid var(--line)}
+.dbar{flex:1;height:100%;display:flex;align-items:flex-end;background:none;border:none;padding:0;cursor:pointer;min-width:0}
+.dbar i{display:block;width:100%;background:var(--accent);border-radius:3px 3px 0 0}
+.days.sel .dbar:not(.on) i{opacity:.35}
+.dbar:hover i{opacity:.8}
+.days-axis{display:flex;justify-content:space-between;margin-top:-8px}
+.day-read{margin-top:-6px}

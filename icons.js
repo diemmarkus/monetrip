@@ -57,3 +57,16 @@ export const iconFor = e => e.icon || autoIcon(e.desc);
 
 // What the picker offers for manual override.
 export const PICKS = ["🍔", "🍕", "🥙", "🍣", "☕", "🍺", "🍷", "🍦", "🛒", "🏨", "⛺", "✈️", "🚆", "🚌", "🚕", "⛴️", "🚗", "⛽", "🅿️", "🎟️", "⛷️", "🏊", "🎉", "🛍️", "💊", "📶", "💶", "💰"];
+
+// Categories for the analytics page, derived from the icon (which itself comes from the title,
+// or the icon someone picked). Anything not listed here, 💰 included, counts as "other".
+const CATS = {
+  food: "🍔🍕🥙🍣🍦☕", drinks: "🍺🍷", groceries: "🛒", stay: "🏨⛺",
+  transport: "✈️🚆🚌🚕⛴️🚗⛽🅿️", fun: "🎟️⛷️🏊🎉", shopping: "🛍️", health: "💊", phone: "📶", cash: "💶",
+};
+const SEG = new Intl.Segmenter();
+const CAT_OF = {};
+for (const [cat, icons] of Object.entries(CATS)) for (const { segment } of SEG.segment(icons)) CAT_OF[segment] = cat;
+// The icon shown for each category in the legend.
+export const CAT_ICON = { food: "🍔", drinks: "🍺", groceries: "🛒", stay: "🏨", transport: "🚆", fun: "🎟️", shopping: "🛍️", health: "💊", phone: "📶", cash: "💶", other: "💰" };
+export const categoryOf = icon => CAT_OF[icon] || "other";

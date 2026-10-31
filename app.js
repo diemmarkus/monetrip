@@ -3,11 +3,11 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signI
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, deleteField, FieldPath }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js?v=82";
-import { settle, balances } from "./settle.js?v=82";
-import { autoIcon, PICKS } from "./icons.js?v=82";
-import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=82";
-import { legalDoc } from "./legal.js?v=82";
+import { firebaseConfig } from "./firebase-config.js?v=85";
+import { settle, balances } from "./settle.js?v=85";
+import { autoIcon, PICKS, categoryOf, CAT_ICON } from "./icons.js?v=85";
+import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=85";
+import { legalDoc } from "./legal.js?v=85";
 
 const CURRENCIES = ["EUR","USD","GBP","CHF","CZK","HUF","PLN","TRY","SEK","NOK","DKK","JPY","CAD","AUD","THB"];
 const $ = (s, r = document) => r.querySelector(s);
@@ -932,6 +932,9 @@ function tripView() {
       return [h("div", { class: "day" }, h("span", { text: dayLabel(key) }), h("span", { class: "num", text: money(Math.round(dayTotal), ccy) })), row];
     }))));
 
+  /* analytics */
+  if (spends.length) out.push(analyticsView(t, spends, ids.length));
+
   /* people & invite */
   const ICON_COPY = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>';
   const ICON_SHARE = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>';
@@ -987,6 +990,104 @@ function tripView() {
             h("button", { onclick: () => { ui.confirmDelete = null; render(); } }, tr("cancel"))))
       : h("button", { class: "ghost", style: "align-self:center;color:var(--danger)", onclick: () => { ui.confirmDelete = t.id; render(); } }, tr("del.button")));
   }
+  return out;
+}
+
+/* ---------- analytics ---------- */
+// Categorical colours, fixed order (validated set from the dataviz palette); "other" is always neutral.
+const CAT_COLORS = 8;
+const FOLD_SHARE = 0.04, FOLD_MAX = 6; // folded view: slices under 4 % (and beyond the 6th) go to "Other"
+function analyticsView(t, spends, people) {
+  const ccy = t.currency, base = e => Math.round(e.amount * (e.rate || 1) * 100);
+  const total = spends.reduce((s, e) => s + base(e), 0);
+  // Every category with its sum, biggest first. Colours follow this full ranking, so folding never repaints a slice.
+  const by = {};
+  for (const e of spends) { const c = categoryOf(iconFor(t, e)); (by[c] ||= { key: c, sum: 0, n: 0 }); by[c].sum += base(e); by[c].n++; }
+  const cats = Object.values(by).sort((a, b) => (a.key === "other") - (b.key === "other") || b.sum - a.sum);
+  let slot = 0;
+  for (const c of cats) c.color = c.key === "other" || slot >= CAT_COLORS ? "var(--cat-other)" : `var(--cat-${++slot})`;
+  const named = cats.filter(c => c.key !== "other");
+  const keep = named.filter((c, i) => i < FOLD_MAX && c.sum >= total * FOLD_SHARE);
+  // Folding a single small slice into "Other" hides more than it tidies: only fold two or more.
+  const folded = named.filter(c => !keep.includes(c));
+  const shown = folded.length + (by.other ? 1 : 0) >= 2 || !folded.length
+    ? [...keep, ...(folded.length || by.other ? [{ key: "other", sum: total - keep.reduce((s, c) => s + c.sum, 0), n: spends.length - keep.reduce((s, c) => s + c.n, 0), color: "var(--cat-other)", folded }] : [])]
+    : cats;
+  const label = c => tr("cat." + c.key);
+  const pct = v => total ? Math.round(v / total * 100) : 0;
+  const sel = shown.find(c => c.key === ui.anaSel);
+  const pick = k => { ui.anaSel = ui.anaSel === k ? null : k; render(); };
+
+  // Donut: circumference 100 so dash lengths are percentages; a small surface gap between slices.
+  const R = 15.9155, gap = shown.length > 1 ? 0.8 : 0;
+  let acc = 0;
+  const arcs = shown.map(c => {
+    const len = c.sum / total * 100, d = Math.max(0, len - gap), off = 25 - acc; acc += len;
+    return `<circle class="slice${sel && sel !== c ? " dim" : ""}" data-k="${c.key}" cx="21" cy="21" r="${R}" fill="none" stroke="${c.color}" stroke-width="7" stroke-dasharray="${d} ${100 - d}" stroke-dashoffset="${off}"><title>${label(c)}: ${money(c.sum, ccy)} (${pct(c.sum)} %)</title></circle>`;
+  }).join("");
+  const pie = h("div", { class: "pie" });
+  pie.innerHTML = `<svg viewBox="0 0 42 42" role="img" aria-label="${tr("ana.title")}">${arcs}</svg>`;
+  pie.querySelector("svg").addEventListener("click", e => { const k = e.target.dataset?.k; pick(k || null); });
+  pie.append(h("div", { class: "pie-center" },
+    h("span", { class: "muted small", text: sel ? label(sel) : tr("ana.total") }),
+    h("b", { class: "num", text: money(sel ? sel.sum : total, ccy) }),
+    sel ? h("span", { class: "muted small num", text: pct(sel.sum) + " %" }) : null));
+
+  const legendRow = c => h("button", { type: "button", class: "leg" + (sel === c ? " on" : sel ? " dim" : ""), onclick: () => pick(c.key), "aria-pressed": String(sel === c) },
+    h("i", { class: "dot", style: `background:${c.color}` }),
+    h("span", { class: "leg-name" }, h("span", { "aria-hidden": "true", text: CAT_ICON[c.key] + " " }), label(c),
+      c.folded?.length ? h("span", { class: "muted", text: " · " + c.folded.map(f => CAT_ICON[f.key]).join("") }) : null),
+    h("span", { class: "num", text: money(c.sum, ccy) }),
+    h("span", { class: "num muted pct", text: pct(c.sum) + " %" }));
+
+  const open = !!ui.anaOpen;
+  const panel = h("div", { class: "panel ana", id: "anapanel" },
+    h("div", { class: "top" }, h("h2", { text: tr("ana.title") })),
+    h("div", { class: "ana-main" }, pie, h("div", { class: "legend" }, shown.map(legendRow))));
+  if (open) panel.append(...analyticsMore(t, spends, cats, total, people, base, label, pct));
+  panel.append(h("button", { type: "button", class: "ghost unfold", "aria-expanded": String(open), onclick: () => { ui.anaOpen = !open; ui.anaDay = null; render(); } },
+    open ? tr("ana.less") : tr("ana.more"), h("span", { class: "chev" + (open ? " up" : ""), "aria-hidden": "true" })));
+  return panel;
+}
+function analyticsMore(t, spends, cats, total, people, base, label, pct) {
+  const ccy = t.currency, out = [];
+  // Days from the first to the last expense, empty days included (only the days with spending for very long trips).
+  const perDay = {};
+  for (const e of spends) perDay[dayKey(e)] = (perDay[dayKey(e)] || 0) + base(e);
+  let days = Object.keys(perDay).sort();
+  const first = new Date(days[0] + "T12:00"), last = new Date(days[days.length - 1] + "T12:00");
+  const span = Math.round((last - first) / 864e5) + 1;
+  if (span <= 62) days = Array.from({ length: span }, (_, i) => isoDay(+first + i * 864e5));
+  const biggest = spends.reduce((b, e) => !b || base(e) > base(b) ? e : b, null);
+  const tile = (lbl, val, sub) => h("div", { class: "tile" }, h("span", { class: "muted small", text: lbl }), h("b", { class: "num", text: val }), sub ? h("span", { class: "muted small ell", text: sub }) : null);
+  out.push(h("div", { class: "tiles" },
+    tile(tr("ana.perDay"), money(Math.round(total / days.length), ccy), tr("ana.days_n", { n: days.length })),
+    tile(tr("ana.perPerson"), money(Math.round(total / Math.max(1, people)), ccy), tr("people", { n: people })),
+    tile(tr("ana.biggest"), money(base(biggest), ccy), biggest.desc)));
+
+  // All categories, nothing folded.
+  const bySum = [...cats].sort((a, b) => b.sum - a.sum);
+  out.push(h("h3", { text: tr("ana.allCats") }), h("div", { class: "list cats" }, bySum.map(c => h("div", { class: "li" },
+    h("span", {}, h("span", { "aria-hidden": "true", text: CAT_ICON[c.key] + " " }), h("b", { text: label(c) }), h("span", { class: "muted", text: " · " + tr("ana.count", { n: c.n }) })),
+    h("span", { class: "num", text: money(c.sum, ccy) }),
+    h("div", { class: "bar" }, h("i", { style: `width:${c.sum / bySum[0].sum * 100}%;background:${c.color}` }))))));
+
+  // Spending per day: one bar per day, tap for the amount.
+  if (days.length > 1) {
+    const max = Math.max(...days.map(d => perDay[d] || 0)), selDay = days.includes(ui.anaDay) ? ui.anaDay : null;
+    out.push(h("h3", { text: tr("ana.days") }),
+      h("p", { class: "muted small day-read", text: selDay ? `${dayLabel(selDay)} · ${money(perDay[selDay] || 0, ccy)}` : tr("ana.dayAvg", { amount: money(Math.round(total / days.length), ccy) }) }),
+      h("div", { class: "days" + (selDay ? " sel" : "") }, days.map(d => h("button", { type: "button", class: "dbar" + (d === selDay ? " on" : ""), title: `${dayLabel(d)}: ${money(perDay[d] || 0, ccy)}`, "aria-label": `${dayLabel(d)}: ${money(perDay[d] || 0, ccy)}`,
+        onclick: () => { ui.anaDay = d === selDay ? null : d; render(); } }, h("i", { style: `height:${perDay[d] ? Math.max(3, perDay[d] / max * 100) : 0}%` })))),
+      h("div", { class: "days-axis muted small" }, h("span", { text: dayLabel(days[0]) }), h("span", { text: dayLabel(days[days.length - 1]) })));
+  }
+
+  // Biggest expenses.
+  const top = [...spends].sort((a, b) => base(b) - base(a)).slice(0, 5);
+  out.push(h("h3", { text: tr("ana.top") }), h("div", { class: "list" }, top.map(e => h("div", { class: "li" },
+    h("span", {}, h("span", { "aria-hidden": "true", text: iconFor(t, e) + " " }), h("b", { text: e.desc })),
+    h("span", { class: "num", text: money(base(e), ccy) }),
+    h("span", { class: "sub", text: `${dayLabel(dayKey(e))} · ${memberName(t, e.paidBy)} · ${pct(base(e))} %` })))));
   return out;
 }
 
