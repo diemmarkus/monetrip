@@ -3,11 +3,11 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signI
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, deleteField, FieldPath }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js?v=85";
-import { settle, balances } from "./settle.js?v=85";
-import { autoIcon, PICKS } from "./icons.js?v=85";
-import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=85";
-import { legalDoc } from "./legal.js?v=85";
+import { firebaseConfig } from "./firebase-config.js?v=86";
+import { settle, balances } from "./settle.js?v=86";
+import { autoIcon, PICKS } from "./icons.js?v=86";
+import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=86";
+import { legalDoc } from "./legal.js?v=86";
 
 const CURRENCIES = ["EUR","USD","GBP","CHF","CZK","HUF","PLN","TRY","SEK","NOK","DKK","JPY","CAD","AUD","THB"];
 const $ = (s, r = document) => r.querySelector(s);
@@ -822,8 +822,17 @@ function tripView() {
       h("button", { type: "button", class: "forbtn pill", id: "forbtn", "aria-label": tr("x.for"), "aria-controls": "forlist", "aria-expanded": String(!!ui.forOpen),
         onclick: ev => { ui.forOpen = !ui.forOpen; const b = ev.currentTarget; b.setAttribute("aria-expanded", String(ui.forOpen)); b.form.querySelector("#forlist").hidden = !ui.forOpen; } },
         h("span", { id: "forsum" }), h("span", { class: "chev", "aria-hidden": "true" }))),
-    h("div", { class: "checks", id: "forlist", role: "group", "aria-label": tr("x.splitBetween"), hidden: !ui.forOpen },
-        byName.map(id => h("label", {}, h("input", { type: "checkbox", name: "xsplit", value: id, checked: defaultSplit.has(id), id: "xs-" + id }), memberName(t, id)))),
+    // Who shares this expense: toggle chips (real checkboxes inside, hidden), you first, plus "Everyone".
+    h("div", { class: "checks people", id: "forlist", role: "group", "aria-label": tr("x.splitBetween"), hidden: !ui.forOpen },
+      h("button", { type: "button", class: "allchip", id: "forall", "aria-pressed": "false", onclick: ev => {
+          const boxes = [...ev.currentTarget.form.querySelectorAll("input[name=xsplit]")], all = boxes.every(b => b.checked);
+          boxes.forEach(b => { b.checked = !all; });
+          boxes[0]?.dispatchEvent(new Event("input", { bubbles: true }));
+        } }, tr("x.forAllChip")),
+      [mine, ...byName.filter(id => id !== mine)].filter(Boolean).map(id => h("label", { class: "pchip" },
+        h("input", { type: "checkbox", name: "xsplit", value: id, checked: defaultSplit.has(id), id: "xs-" + id }),
+        h("span", { class: "tick", "aria-hidden": "true" }),
+        h("span", { text: id === mine ? tr("x.youSubj") : memberName(t, id) })))),
   );
   if (editing) form.classList.add("editing");
   form._syncIcon = () => {
@@ -835,6 +844,7 @@ function tripView() {
   form._syncIcon();
   form._syncFor = () => {
     const on = [...form.querySelectorAll("input[name=xsplit]")].filter(c => c.checked).map(c => c.value);
+    $("#forall", form)?.setAttribute("aria-pressed", String(on.length === ids.length));
     const names = on.map(id => id === mine ? tr("x.youObj") : memberName(t, id));
     const list = names.length <= 3 ? names.join(", ") : names.slice(0, 2).join(", ") + ` +${names.length - 2}`;
     $("#forsum", form).textContent = !on.length ? tr("x.forNobody")
