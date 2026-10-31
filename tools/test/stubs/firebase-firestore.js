@@ -3,6 +3,9 @@ const trip = { name: "Edinburgh", currency: "EUR", localCurrency: "GBP", code: "
   members: { m1: { name: "Markus", uid: "u1" }, m2: { name: "Papa", uid: null }, m3: { name: "Lukas", uid: null } }, memberUids: ["u1"], settlement: null, paid: {} };
 store.set("trips/t1", trip);
 store.set("trips/t1/expenses/e1", { desc: "Pub", amount: 5, currency: "GBP", rate: 1.19, paidBy: "m1", split: ["m1","m2"], at: Date.now()-1e5, by: "m1", date: "2026-10-28" });
+// A second trip this phone has never opened (no saved expenses), for the slow-network check.
+store.set("trips/t2", { ...trip, name: "Vienna", code: "XYZ789", createdAt: 2 });
+store.set("trips/t2/expenses/v1", { desc: "Schnitzel", amount: 24, currency: "EUR", rate: 1, paidBy: "m1", split: ["m1","m2"], at: Date.now()-5e4, by: "m1", date: "2026-10-29" });
 const fire = () => setTimeout(() => subs.forEach(f => f()), 0);
 export const getFirestore = () => ({});
 export const doc = (db, ...p) => ({ path: p.join("/") });
@@ -14,8 +17,10 @@ export const onSnapshot = (ref, a, b) => { const cb = typeof a === "function" ? 
   const f = () => {
     if (ref.coll) {
       const pre = ref.path + "/"; const docs = [...store.keys()].filter(k => k.startsWith(pre) && !k.slice(pre.length).includes("/")).map(snapDoc);
-      cb({ docs, metadata: { fromCache: false } });
-    } else cb(snapDoc(ref.path));
+      // window.__dataDelay (ms) simulates a slow network for expense lists.
+      const send = () => cb({ docs, empty: !docs.length, metadata: { fromCache: false } });
+      if (window.__dataDelay && pre.endsWith("/expenses/")) setTimeout(send, window.__dataDelay); else send();
+    } else cb({ ...snapDoc(ref.path), metadata: { fromCache: false } });
   };
   subs.add(f); f(); return () => subs.delete(f);
 };

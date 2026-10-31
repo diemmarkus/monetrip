@@ -58,7 +58,7 @@ const DICT = {
 
     "trip.allTrips": "← All trips",
     "trip.missing": "This trip doesn't exist or you're not on it. Ask for a new invite link.",
-    "trip.loading": "Loading trip…",
+    "trip.loading": "Loading trip…", "trip.slow": "Taking longer than usual – check your connection.",
     "trip.renamed": "Trip renamed", "trip.renameFailed": "Couldn't rename the trip. Try again.",
     "trip.rename": "Rename trip", "trip.label": "Trip",
     "trip.total": "Total ", "trip.payingIn": "Paying in {c} · ", "trip.settlesIn": "Settles in {c}",
@@ -182,7 +182,7 @@ const DICT = {
 
     "trip.allTrips": "← Alle Reisen",
     "trip.missing": "Diese Reise gibt es nicht, oder du bist nicht dabei. Lass dir einen neuen Einladungslink schicken.",
-    "trip.loading": "Reise wird geladen…",
+    "trip.loading": "Reise wird geladen…", "trip.slow": "Dauert länger als sonst – prüf deine Verbindung.",
     "trip.renamed": "Umbenannt", "trip.renameFailed": "Umbenennen hat nicht geklappt. Bitte nochmal versuchen.",
     "trip.rename": "Umbenennen", "trip.label": "Reise",
     "trip.total": "Gesamt ", "trip.payingIn": "Vor Ort {c} · ", "trip.settlesIn": "Abrechnung in {c}",

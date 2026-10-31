@@ -76,6 +76,11 @@ Money inside the app is integer **cents** in the trip currency: `Math.round(amou
 - Firestore uses `persistentLocalCache`. On top, `app.js` keeps a **start-up snapshot** (`mt-snap`) of the
   trip list / open trip and draws it before Firebase auth resolves (`html.booting` blocks taps until then).
   Cleared on sign-out. If you add fields to trips/expenses, they'll be in the snapshot automatically.
+- The snapshot also keeps `expCache` (expenses of the last 8 opened trips). Opening a trip draws it at once
+  from the trip list + `expCache`, even while the sign-in check is still running (trip rows and the back
+  button stay tappable during `booting`; live listeners attach after sign-in). A trip with no saved
+  expenses shows a loading screen (`.trip-loading`, "Taking longer than usual" after 6 s); an empty
+  expense list from Firestore's cache is ignored until the server answers.
 - `render()` redraws the whole `#app` and restores typed values by element `id` — give inputs stable ids;
   fields that are driven by state (filters, `xf*`) are excluded from that restore on purpose.
 
@@ -94,7 +99,9 @@ Money inside the app is integer **cents** in the trip currency: `Math.round(amou
 
 `tools/test/smoke.js` loads the real app with Playwright, swapping the Firebase SDK for the fakes in
 `tools/test/stubs/` (an in-memory store with trip `t1`: Markus/Papa/Lukas, one GBP expense). It checks that
-the trip renders, an expense can be added, and Settle up produces a plan. `GUEST=1` runs it as a guest.
+the trip renders, an expense can be added, Settle up produces a plan, and — with a simulated slow
+network (`window.__authDelay`, `window.__dataDelay`) — that trips open from the phone's copy during
+sign-in and an unseen trip (`t2` Vienna) shows the loading screen, then loads. `GUEST=1` runs it as a guest.
 In a test, `window.__store` is the fake database and `window.__fire()` pushes changes to listeners.
 Real Firebase, Google sign-in and phone keyboards can't be tested this way — say so when it matters.
 

@@ -3,11 +3,11 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signI
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, deleteField, FieldPath }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js?v=76";
-import { settle, balances } from "./settle.js?v=76";
-import { autoIcon, PICKS } from "./icons.js?v=76";
-import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=76";
-import { legalDoc } from "./legal.js?v=76";
+import { firebaseConfig } from "./firebase-config.js?v=78";
+import { settle, balances } from "./settle.js?v=78";
+import { autoIcon, PICKS } from "./icons.js?v=78";
+import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=78";
+import { legalDoc } from "./legal.js?v=78";
 
 const CURRENCIES = ["EUR","USD","GBP","CHF","CZK","HUF","PLN","TRY","SEK","NOK","DKK","JPY","CAD","AUD","THB"];
 const $ = (s, r = document) => r.querySelector(s);
@@ -102,17 +102,31 @@ function watchTrips() {
 }
 function openTrip(id, keepShown = false) {
   // keepShown: the trip is already on screen from the start-up snapshot; just attach live updates.
-  if (keepShown && cur.id === id) { cur.unsubs.forEach(u => u()); cur.unsubs = []; } else closeTrip();
+  if (keepShown && cur.id === id) { cur.unsubs.forEach(u => u()); cur.unsubs = []; }
+  else {
+    // Draw straight away from what this phone already has (trip list + last seen expenses);
+    // live data replaces it when it arrives. Without saved expenses the trip shows a loading screen.
+    closeTrip();
+    const known = trips.find(x => x.id === id), saved = expCache[id];
+    cur.trip = known || null; cur.expenses = saved ? saved.slice() : []; cur.expLoaded = !!saved; cur.openedAt = Date.now();
+  }
   cur.id = id; if (location.hash !== "#trip-" + id) location.hash = "trip-" + id;
-  cur.unsubs.push(onSnapshot(doc(db, "trips", id), s => { cur.trip = s.exists() ? { id: s.id, ...s.data() } : null; if (!cur.trip) cur.missing = true; render(); },
-    () => { cur.missing = true; render(); }));
-  cur.unsubs.push(onSnapshot(collection(db, "trips", id, "expenses"), s => {
+  // Still confirming the sign-in (slow network): show the trip now, attach live data once signed in.
+  if (booting) { render(); return; }
+  cur.unsubs.push(onSnapshot(doc(db, "trips", id), s => {
+    if (!s.exists() && s.metadata?.fromCache) return; // not on this phone yet: wait for the server
+    cur.trip = s.exists() ? { id: s.id, ...s.data() } : null; if (!cur.trip) cur.missing = true; render();
+  }, () => { cur.missing = true; render(); }));
+  cur.unsubs.push(onSnapshot(collection(db, "trips", id, "expenses"), { includeMetadataChanges: true }, s => {
+    // An empty answer from the phone's cache may just mean "never synced here": keep loading until the server answers.
+    if (s.empty && s.metadata?.fromCache && !cur.expLoaded) return;
     cur.expenses = s.docs.map(d => ({ id: d.id, ...d.data() }))
-      .sort((a, b) => dayKey(b).localeCompare(dayKey(a)) || (b.at || 0) - (a.at || 0)); render();
+      .sort((a, b) => dayKey(b).localeCompare(dayKey(a)) || (b.at || 0) - (a.at || 0));
+    cur.expLoaded = true; rememberExpenses(id, cur.expenses); render();
   }, () => {}));
   render();
 }
-function closeTrip() { ui.sheetOpen = false; ui.editing = null; document.documentElement.classList.remove("sheet-open"); cur.unsubs.forEach(u => u()); cur = { id: null, trip: null, expenses: [], unsubs: [] }; ui.joinPick = false; }
+function closeTrip() { ui.sheetOpen = false; ui.editing = null; document.documentElement.classList.remove("sheet-open"); cur.unsubs.forEach(u => u()); cur = { id: null, trip: null, expenses: [], unsubs: [], expLoaded: false }; ui.joinPick = false; }
 function goHome() { closeTrip(); history.replaceState(null, "", location.pathname); render(); }
 
 async function createTrip(name, ccy, local, nick) {
@@ -433,6 +447,13 @@ addEventListener("hashchange", () => {
    in localStorage and drawn immediately; taps wait until the sign-in check is done. */
 const SNAP_KEY = "mt-snap";
 let booting = false, snapTimer = 0;
+// Last seen expenses of the most recently opened trips, so reopening one is instant even offline.
+let expCache = {}, expCacheUid = null;
+const EXP_CACHE_TRIPS = 8;
+function rememberExpenses(id, list) {
+  delete expCache[id]; expCache[id] = list; // newest last
+  const ids = Object.keys(expCache); for (const old of ids.slice(0, Math.max(0, ids.length - EXP_CACHE_TRIPS))) delete expCache[old];
+}
 function saveSnapshot() {
   if (booting || !me) return;
   clearTimeout(snapTimer);
@@ -440,21 +461,26 @@ function saveSnapshot() {
     try {
       const withTrip = cur.id && cur.trip;
       localStorage.setItem(SNAP_KEY, JSON.stringify({ uid: me.uid, name: me.displayName || "", photo: googlePhoto(), email: me.email || "", anon: !!me.isAnonymous,
-        trips, tripId: withTrip ? cur.id : null, trip: withTrip ? cur.trip : null, expenses: withTrip ? cur.expenses : [] }));
+        trips, tripId: withTrip ? cur.id : null, trip: withTrip ? cur.trip : null, expenses: withTrip ? cur.expenses : [], expCache }));
     } catch {}
   }, 500);
 }
-function clearSnapshot() { clearTimeout(snapTimer); try { localStorage.removeItem(SNAP_KEY); } catch {} }
+function clearSnapshot() { clearTimeout(snapTimer); expCache = {}; try { localStorage.removeItem(SNAP_KEY); } catch {} }
 function bootFromSnapshot() {
   let snap = null; try { snap = JSON.parse(localStorage.getItem(SNAP_KEY) || "null"); } catch {}
   if (!snap?.uid) return;
+  expCacheUid = snap.uid; expCache = snap.expCache || {};
+  if (snap.tripId && snap.expenses && !expCache[snap.tripId]) expCache[snap.tripId] = snap.expenses;
   const tm = location.hash.match(/^#trip-([a-z0-9]+)$/);
   if (location.hash && !tm) return;          // invite links, imprint: wait for the real sign-in
-  if (tm && tm[1] !== snap.tripId) return;   // a trip we have no copy of
+  if (tm && tm[1] !== snap.tripId && !expCache[tm[1]]) return;   // a trip we have no copy of
   booting = true;
   me = { uid: snap.uid, displayName: snap.name, photoURL: snap.photo, email: snap.email, isAnonymous: snap.anon };
   trips = snap.trips || []; tripsLoaded = true;
-  if (tm) cur = { id: snap.tripId, trip: snap.trip, expenses: snap.expenses || [], unsubs: [] };
+  if (tm) {
+    const id = tm[1], trip = id === snap.tripId ? snap.trip : trips.find(x => x.id === id) || null;
+    cur = { id, trip, expenses: (expCache[id] || []).slice(), unsubs: [], expLoaded: true, openedAt: Date.now() };
+  }
   document.documentElement.classList.add("booting");
   render();
 }
@@ -590,7 +616,13 @@ function refreshExpenses() {
 }
 function tripView() {
   const t = cur.trip, back = h("button", { class: "back", onclick: goHome }, tr("trip.allTrips"));
-  if (!t) return [brand(), back, h("div", { class: "panel" }, h("p", { class: "muted", text: cur.missing ? tr("trip.missing") : tr("trip.loading") }))];
+  if (cur.missing) return [brand(), back, h("div", { class: "panel" }, h("p", { class: "muted", text: tr("trip.missing") }))];
+  if (!t || !cur.expLoaded) return [brand(), back, h("div", { class: "trip-loading", role: "status" },
+    t ? h("h1", { text: t.name }) : null,
+    h("div", { class: "sp-dots", "aria-hidden": "true" }, h("i"), h("i"), h("i")),
+    h("p", { class: "muted", text: tr("trip.loading") }),
+    // Appears by itself after a few seconds (CSS delay, counted from when the trip was opened).
+    h("p", { class: "muted slow", style: `animation-delay:${Math.max(0, 6000 - (Date.now() - (cur.openedAt || Date.now())))}ms`, text: tr("trip.slow") }))];
   const mine = myMemberId(t), ccy = t.currency, ids = Object.keys(t.members || {});
   const { bal, paid, share } = balances(t.members, cur.expenses);
   const spends = cur.expenses.filter(e => e.kind !== "payment");
@@ -964,6 +996,8 @@ bootFromSnapshot();
 onAuthStateChanged(auth, async user => {
   const keep = booting && user && user.uid === me?.uid; // the snapshot on screen belongs to this user
   if (booting) { booting = false; document.documentElement.classList.remove("booting"); if (!keep) closeTrip(); }
+  if (expCacheUid && expCacheUid !== user?.uid) expCache = {};
+  expCacheUid = user?.uid || null;
   me = user; unsubTrips?.();
   // Accounts saved with Google before that copied Google's name and photo: repair once.
   const g = user && !user.isAnonymous && (user.providerData || []).find(p => p?.providerId === "google.com");

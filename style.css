@@ -318,7 +318,14 @@ button.ghost.lang{font-family:var(--mono);font-size:12px;letter-spacing:.06em;pa
 .chip.confirm{background:color-mix(in srgb,var(--danger) 14%,var(--surface))}
 .chip.confirm .chip-x{color:var(--danger);font-weight:600;font-size:13px}
 /* Start-up snapshot on screen: wait for the sign-in check before accepting taps */
-html.booting #app button,html.booting #app input,html.booting #app select,html.booting #app .swipe,html.booting #app .trip{pointer-events:none}
+html.booting #app button:not(.trip):not(.back),html.booting #app input,html.booting #app select,html.booting #app .swipe{pointer-events:none}
+/* Opening a trip that isn't on this phone yet */
+.trip-loading{display:flex;flex-direction:column;align-items:center;gap:6px;padding:56px 16px;text-align:center}
+.trip-loading h1{margin:0 0 4px;overflow-wrap:anywhere}
+.trip-loading .sp-dots{margin:10px 0 6px}
+.trip-loading p{margin:0}
+.trip-loading .slow{max-width:32ch;margin-top:8px;opacity:0;animation:show-late 0s linear forwards}
+@keyframes show-late{to{opacity:1}}
 .filters{display:flex;flex-direction:column;gap:8px}
 .filters input[type=search]{min-height:40px;padding:7px 10px}
 .filters select{min-height:40px;padding:7px 10px}

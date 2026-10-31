@@ -37,6 +37,21 @@ fs.mkdirSync(OUT, { recursive: true });
     await p.click("text=Settle up"); await p.waitForTimeout(400);
     ok("settle up shows a plan", (await p.$$(".pay")).length > 0);
   }
+  if (!process.env.GUEST) {
+    // Slow network: the sign-in check and the expense lists take seconds. The start page and trips
+    // seen before must open at once from the phone's copy; a trip never opened shows a loading screen.
+    await p.goto("http://mt.local/index.html"); await p.waitForTimeout(900); // save the start-up snapshot
+    await p.addInitScript(() => { window.__authDelay = 2500; window.__dataDelay = 1500; });
+    await p.reload(); await p.waitForTimeout(300);
+    await p.click(".trip >> text=Edinburgh"); await p.waitForTimeout(200);
+    ok("slow net: seen trip opens during sign-in", (await p.$(".ticket")) !== null && (await p.$$(".swipe")).length === 2);
+    await p.click(".back"); await p.waitForTimeout(200);
+    await p.click(".trip >> text=Vienna"); await p.waitForTimeout(200);
+    ok("slow net: unseen trip shows loading screen", (await p.textContent(".trip-loading h1").catch(() => "")) === "Vienna");
+    await p.screenshot({ path: path.join(OUT, "trip-loading.png") });
+    await p.waitForTimeout(4500);
+    ok("slow net: unseen trip loads", (await p.$(".ticket")) !== null && (await p.$$(".swipe")).length === 1);
+  }
   ok("no page errors", errs.length === 0); if (errs.length) console.log(errs);
   await b.close();
 })();
