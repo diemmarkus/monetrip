@@ -96,7 +96,10 @@ const DICT = {
     "x.whatFor": "What for", "x.descPh": "Dinner, taxi, hotel…", "x.amount": "Amount", "x.currency": "Currency",
     "x.paidBy": "Paid by", "x.date": "Date", "x.for": "For", "x.splitBetween": "Split equally between",
     "x.saveChanges": "Save changes", "x.add": "Add expense", "x.addShort": "Add", "x.saveShort": "Save",
-    "x.nobody": "Nobody yet", "x.everyone": "Everyone ({n})", "x.justYou": "Just you",
+    "x.nobody": "Nobody yet",
+    "x.sentence": "{who} paid {when} for {for}", "x.sentenceYou": "{who} paid {when} for {for}",
+    "x.youSubj": "You", "x.youObj": "you", "x.forAll": "everyone", "x.forNobody": "nobody yet",
+    "x.whenToday": "today", "x.whenYesterday": "yesterday", "x.whenOn": "on {d}", "x.everyone": "Everyone ({n})", "x.justYou": "Just you",
 
     "filter.search": "Search expenses", "filter.person": "Person", "filter.everyone": "Everyone", "filter.kind": "Type",
     "filter.all": "Everything", "filter.paidBy": "Paid by {name}", "filter.paidFor": "Paid for {name}", "filter.paidByYou": "Paid by you", "filter.paidForYou": "Paid for you", "filter.pay": "Payments", "filter.clear": "Clear", "filter.toggle": "Filter expenses",
@@ -220,7 +223,10 @@ const DICT = {
     "x.whatFor": "Wofür?", "x.descPh": "Abendessen, Taxi, Hotel…", "x.amount": "Betrag", "x.currency": "Währung",
     "x.paidBy": "Wer hat bezahlt?", "x.date": "Wann?", "x.for": "Für wen?", "x.splitBetween": "Gleichmäßig aufteilen auf",
     "x.saveChanges": "Speichern", "x.add": "Eintragen", "x.addShort": "Eintragen", "x.saveShort": "Speichern",
-    "x.nobody": "Noch niemand", "x.everyone": "Alle ({n})", "x.justYou": "Nur du",
+    "x.nobody": "Noch niemand",
+    "x.sentence": "{who} hat {when} für {for} bezahlt", "x.sentenceYou": "{who} hast {when} für {for} bezahlt",
+    "x.youSubj": "Du", "x.youObj": "dich", "x.forAll": "alle", "x.forNobody": "noch niemanden",
+    "x.whenToday": "heute", "x.whenYesterday": "gestern", "x.whenOn": "am {d}", "x.everyone": "Alle ({n})", "x.justYou": "Nur du",
 
     "filter.search": "Ausgaben durchsuchen", "filter.person": "Person", "filter.everyone": "Alle Personen", "filter.kind": "Art",
     "filter.all": "Alles", "filter.paidBy": "Bezahlt von {name}", "filter.paidFor": "Bezahlt für {name}", "filter.paidByYou": "Von dir bezahlt", "filter.paidForYou": "Für dich bezahlt", "filter.pay": "Zahlungen", "filter.clear": "Zurücksetzen", "filter.toggle": "Ausgaben filtern",
