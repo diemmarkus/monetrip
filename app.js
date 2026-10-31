@@ -3,11 +3,11 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signI
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, deleteField, FieldPath }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js?v=106";
-import { settle, balances } from "./settle.js?v=106";
-import { autoIcon, PICKS, categoryFor, CAT_ICON } from "./icons.js?v=106";
-import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=106";
-import { legalDoc } from "./legal.js?v=106";
+import { firebaseConfig } from "./firebase-config.js?v=107";
+import { settle, balances } from "./settle.js?v=107";
+import { autoIcon, PICKS, categoryFor, CAT_ICON } from "./icons.js?v=107";
+import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=107";
+import { legalDoc } from "./legal.js?v=107";
 
 const CURRENCIES = ["EUR","USD","GBP","CHF","CZK","HUF","PLN","TRY","SEK","NOK","DKK","JPY","CAD","AUD","THB"];
 const $ = (s, r = document) => r.querySelector(s);
@@ -560,7 +560,7 @@ function signInView() {
 function homeView() {
   const err = h("p", { class: "err", hidden: true });
   let home = "EUR"; try { home = localStorage.getItem("mt-home") || "EUR"; } catch {}
-  const ccySelect = (id, sel) => h("select", { id, name: id }, CURRENCIES.map(c => h("option", { value: c, selected: c === sel }, c)));
+  const ccySelect = (id, sel, label) => h("select", { id, name: id, "aria-label": label }, CURRENCIES.map(c => h("option", { value: c, selected: c === sel }, c)));
   const createForm = h("form", { class: "panel xform", onsubmit: async e => {
       e.preventDefault(); const f = e.target, name = f.tname.value.trim(), nick = f.tnick.value.trim(); if (!name || !nick) return;
       const btn = f.querySelector("button[type=submit]"); btn.disabled = true;
@@ -568,11 +568,12 @@ function homeView() {
       try { await createTrip(name, f.thome.value, f.tlocal.value, nick); } catch { err.hidden = false; err.textContent = tr("home.createFailed"); btn.disabled = false; }
     } },
     h("h2", { text: tr("home.newTrip") }),
-    h("label", {}, tr("home.tripName"), h("input", { id: "tname", name: "tname", placeholder: tr("home.tripNamePh"), required: true, maxlength: 60 })),
+    // No visible labels: placeholders and the hints under the currencies say what goes where.
+    h("input", { id: "tname", name: "tname", placeholder: tr("home.tripNamePh"), "aria-label": tr("home.tripName"), required: true, maxlength: 60 }),
     h("div", { class: "pair" },
-      h("label", {}, tr("home.homeCcy"), ccySelect("thome", home), h("span", { class: "hint", text: tr("home.homeCcyHint") })),
-      h("label", {}, tr("home.tripCcy"), ccySelect("tlocal", home), h("span", { class: "hint", text: tr("home.tripCcyHint") }))),
-    h("label", {}, tr("home.yourName"), h("input", { id: "tnick", name: "tnick", value: firstName(), required: true, maxlength: 30 })),
+      h("div", { class: "field" }, ccySelect("thome", home, tr("home.homeCcy")), h("span", { class: "hint", text: tr("home.homeCcyHint") })),
+      h("div", { class: "field" }, ccySelect("tlocal", home, tr("home.tripCcy")), h("span", { class: "hint", text: tr("home.tripCcyHint") }))),
+    h("input", { id: "tnick", name: "tnick", value: firstName(), placeholder: tr("home.yourNamePh"), "aria-label": tr("home.yourName"), required: true, maxlength: 30 }),
     err,
     h("button", { class: "primary", type: "submit" }, tr("home.create")));
   const jerr = h("p", { class: "err", hidden: true });
