@@ -3,11 +3,11 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signI
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, deleteField, FieldPath }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js?v=78";
-import { settle, balances } from "./settle.js?v=78";
-import { autoIcon, PICKS } from "./icons.js?v=78";
-import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=78";
-import { legalDoc } from "./legal.js?v=78";
+import { firebaseConfig } from "./firebase-config.js?v=80";
+import { settle, balances } from "./settle.js?v=80";
+import { autoIcon, PICKS } from "./icons.js?v=80";
+import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=80";
+import { legalDoc } from "./legal.js?v=80";
 
 const CURRENCIES = ["EUR","USD","GBP","CHF","CZK","HUF","PLN","TRY","SEK","NOK","DKK","JPY","CAD","AUD","THB"];
 const $ = (s, r = document) => r.querySelector(s);
@@ -271,7 +271,7 @@ const iconFor = (t, e) => e.icon || suggestIcon(t, e.desc);
 /* ---------- expense form helpers ---------- */
 function resetExpenseForm() {
   const f = app.querySelector(".xform"); if (!f) return;
-  f.reset(); f.xrate.value = ""; f.xicon.value = ""; delete f.dataset.dirty;
+  f.reset(); f.xrate.value = ""; f.xicon.value = ""; f.xdate.value = isoDay(Date.now()); delete f.dataset.dirty;
   ui.forOpen = false; f.querySelector("#forlist").hidden = true; f.querySelector("#forbtn").setAttribute("aria-expanded", "false");
   f._resync?.(); f._syncIcon?.();
 }
@@ -755,8 +755,8 @@ function tripView() {
   const lastOwn = cur.expenses.filter(x => x.by === mine && x.kind !== "payment").reduce((best, x) => !best || (x.at || 0) > (best.at || 0) ? x : best, null);
   const lastSplit = (lastOwn?.split || []).filter(id => ids.includes(id));
   const defaultSplit = new Set(lastSplit.length ? lastSplit : ids);
-  // Paid by: whoever paid in this person's own last expense, else themselves.
-  const defaultPaid = lastOwn && ids.includes(lastOwn.paidBy) ? lastOwn.paidBy : mine;
+  // Paid by: always yourself to start with; paying for someone else is the exception.
+  const defaultPaid = mine;
   const byName = ids.slice().sort((a, b) => memberName(t, a).localeCompare(memberName(t, b), locale(), { sensitivity: "base" }));
   if (ui.editing && !editing && cur.expenses.length) ui.editing = null;
   const iconBtn = h("button", { type: "button", class: "icon-pick", "aria-label": tr("x.chooseIcon"), "aria-expanded": "false",
@@ -809,7 +809,13 @@ function tripView() {
     rateBox,
     h("div", { class: "pair" },
       h("label", {}, tr("x.paidBy"), h("select", { id: "xpaid", name: "xpaid" }, byName.map(id => h("option", { value: id, selected: id === defaultPaid }, memberName(t, id) + (id === mine ? tr("youSuffix") : ""))))),
-      h("label", {}, tr("x.date"), h("input", { id: "xdate", name: "xdate", type: "date", value: isoDay(Date.now()), max: isoDay(Date.now() + 864e5 * 366) }))),
+      // Shows "Today" / "Yesterday" / a short date; the native date input lies invisibly on top, so a tap opens its picker.
+      h("label", {}, tr("x.date"), h("span", { class: "date-field" },
+        (() => { const d = h("span", { class: "date-show", id: "xdateshow", "aria-hidden": "true" }, h("span", { text: tr("today") }));
+          d.insertAdjacentHTML("beforeend", '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>'); return d; })(),
+        h("input", { id: "xdate", name: "xdate", type: "date", value: isoDay(Date.now()), max: isoDay(Date.now() + 864e5 * 366),
+          onclick: e => { try { e.target.showPicker?.(); } catch {} },
+          onchange: () => form._syncDate() })))),
     h("div", { class: "forfield" },
       h("span", { class: "flabel", id: "forlbl", text: tr("x.for") }),
       h("button", { type: "button", class: "forbtn", id: "forbtn", "aria-labelledby": "forlbl forsum", "aria-controls": "forlist", "aria-expanded": String(!!ui.forOpen),
@@ -834,8 +840,12 @@ function tripView() {
       : on.length === ids.length ? (ids.length > 1 ? tr("x.everyone", { n: ids.length }) : tr("x.justYou"))
       : on[0] === mine ? list.charAt(0).toLocaleUpperCase(locale()) + list.slice(1) : list;
   };
+  form._syncDate = () => {
+    if (!form.xdate.value) form.xdate.value = isoDay(Date.now()); // cleared in the picker: back to today
+    $("#xdateshow span", form).textContent = dayLabel(form.xdate.value);
+  };
   form._resync = () => {
-    form._syncFor();
+    form._syncFor(); form._syncDate();
     const c = form.xccy.value; rateBox.hidden = c === ccy; form.xrate.required = c !== ccy;
     $("#fxfrom", rateBox).textContent = "1 " + c + " =";
     const a = c === ccy ? null : autoRate(c, ccy);

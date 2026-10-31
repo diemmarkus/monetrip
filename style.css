@@ -157,6 +157,11 @@ details summary{cursor:pointer;font-weight:600;color:var(--accent-text)}
 .day .num{text-transform:none;letter-spacing:0;font-size:13px}
 .day + .swipe{border-top:none}
 input[type=date]{min-height:44px;-webkit-appearance:none;appearance:none}
+.date-field{position:relative;display:block}
+.date-show{box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:44px;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+.date-show svg{flex:none;color:var(--muted)}
+.date-field input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.date-field:focus-within .date-show{outline:2px solid var(--accent-text);outline-offset:-1px}
 
 /* expense icons */
 .field{display:flex;flex-direction:column;gap:4px}
