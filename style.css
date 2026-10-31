@@ -368,9 +368,13 @@ html.booting #app button:not(.trip):not(.back),html.booting #app input,html.boot
 .ana .cats .li{grid-template-columns:1fr auto}
 .days{display:flex;align-items:flex-end;gap:2px;height:110px;border-bottom:1px solid var(--line)}
 .dbar{flex:1;height:100%;display:flex;align-items:flex-end;background:none;border:none;padding:0;cursor:pointer;min-width:0}
-.dbar i{display:block;width:100%;background:var(--accent);border-radius:3px 3px 0 0}
-.days.sel .dbar:not(.on) i{opacity:.35}
-.dbar:hover i{opacity:.8}
+.dbar .stack{display:flex;flex-direction:column-reverse;gap:2px;width:100%;border-radius:3px 3px 0 0;overflow:hidden}
+.dbar .stack i{display:block;min-height:2px}
+.day-legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13px;margin-top:-6px}
+.day-legend span{display:inline-flex;align-items:center;gap:6px}
+.day-legend .dot{width:10px;height:10px;border-radius:3px}
+.days.sel .dbar:not(.on) .stack{opacity:.35}
+.dbar:hover .stack{opacity:.8}
 .days-axis{display:flex;justify-content:space-between;margin-top:-8px}
 .day-read{margin-top:-6px}
 /* Expense sheet: "You paid today for everyone" with tappable pills */

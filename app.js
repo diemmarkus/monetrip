@@ -3,11 +3,11 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signI
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, deleteField, FieldPath }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js?v=88";
-import { settle, balances } from "./settle.js?v=88";
-import { autoIcon, PICKS, categoryOf, CAT_ICON } from "./icons.js?v=88";
-import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=88";
-import { legalDoc } from "./legal.js?v=88";
+import { firebaseConfig } from "./firebase-config.js?v=90";
+import { settle, balances } from "./settle.js?v=90";
+import { autoIcon, PICKS, categoryOf, CAT_ICON } from "./icons.js?v=90";
+import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=90";
+import { legalDoc } from "./legal.js?v=90";
 
 const CURRENCIES = ["EUR","USD","GBP","CHF","CZK","HUF","PLN","TRY","SEK","NOK","DKK","JPY","CAD","AUD","THB"];
 const $ = (s, r = document) => r.querySelector(s);
@@ -1092,19 +1092,33 @@ function analyticsMore(t, spends, cats, total, people, base, label, pct) {
     tile(tr("ana.biggest"), money(base(biggest), ccy), biggest.desc)));
 
   // All categories, nothing folded.
-  const bySum = [...cats].sort((a, b) => b.sum - a.sum);
-  out.push(h("h3", { text: tr("ana.allCats") }), h("div", { class: "list cats" }, bySum.map(c => h("div", { class: "li" },
+  // Only real categories here; the pie's "Other" is a fold of these plus untagged expenses, so it would read differently.
+  const bySum = cats.filter(c => c.key !== "other").sort((a, b) => b.sum - a.sum);
+  if (bySum.length) out.push(h("h3", { text: tr("ana.allCats") }), h("div", { class: "list cats" }, bySum.map(c => h("div", { class: "li" },
     h("span", {}, h("span", { "aria-hidden": "true", text: CAT_ICON[c.key] + " " }), h("b", { text: label(c) }), h("span", { class: "muted", text: " · " + tr("ana.count", { n: c.n }) })),
     h("span", { class: "num", text: money(c.sum, ccy) }),
     h("div", { class: "bar" }, h("i", { style: `width:${c.sum / bySum[0].sum * 100}%;background:${c.color}` }))))));
 
-  // Spending per day: one bar per day, tap for the amount.
+  // Spending per day, stacked by who paid; tap a day for its amount and who paid what.
   if (days.length > 1) {
     const max = Math.max(...days.map(d => perDay[d] || 0)), selDay = days.includes(ui.anaDay) ? ui.anaDay : null;
+    // One colour per person, in name order over the whole trip, so a person keeps their colour whatever is shown.
+    const order = Object.keys(t.members || {}).sort((a, b) => memberName(t, a).localeCompare(memberName(t, b), locale(), { sensitivity: "base" }));
+    const color = id => { const i = order.indexOf(id); return i >= 0 && i < CAT_COLORS ? `var(--cat-${i + 1})` : "var(--cat-other)"; };
+    const paidOn = {};
+    for (const e of spends) { const d = dayKey(e); (paidOn[d] ||= {}); paidOn[d][e.paidBy] = (paidOn[d][e.paidBy] || 0) + base(e); }
+    const payers = order.filter(id => days.some(d => paidOn[d]?.[id]));
+    const who = d => payers.filter(id => paidOn[d]?.[id]).map(id => `${memberName(t, id)} ${money(paidOn[d][id], ccy)}`).join(" · ");
     out.push(h("h3", { text: tr("ana.days") }),
-      h("p", { class: "muted small day-read", text: selDay ? `${dayLabel(selDay)} · ${money(perDay[selDay] || 0, ccy)}` : tr("ana.dayAvg", { amount: money(Math.round(total / days.length), ccy) }) }),
-      h("div", { class: "days" + (selDay ? " sel" : "") }, days.map(d => h("button", { type: "button", class: "dbar" + (d === selDay ? " on" : ""), title: `${dayLabel(d)}: ${money(perDay[d] || 0, ccy)}`, "aria-label": `${dayLabel(d)}: ${money(perDay[d] || 0, ccy)}`,
-        onclick: () => { ui.anaDay = d === selDay ? null : d; render(); } }, h("i", { style: `height:${perDay[d] ? Math.max(3, perDay[d] / max * 100) : 0}%` })))),
+      payers.length > 1 ? h("div", { class: "day-legend" }, payers.map(id => h("span", {}, h("i", { class: "dot", style: `background:${color(id)}` }), memberName(t, id)))) : null,
+      h("p", { class: "muted small day-read", text: selDay ? `${dayLabel(selDay)} · ${money(perDay[selDay] || 0, ccy)}` + (perDay[selDay] ? " — " + who(selDay) : "") : tr("ana.dayAvg", { amount: money(Math.round(total / days.length), ccy) }) }),
+      h("div", { class: "days" + (selDay ? " sel" : "") }, days.map(d => {
+        const lbl = `${dayLabel(d)}: ${money(perDay[d] || 0, ccy)}` + (perDay[d] ? ` (${who(d)})` : "");
+        return h("button", { type: "button", class: "dbar" + (d === selDay ? " on" : ""), title: lbl, "aria-label": lbl,
+          onclick: () => { ui.anaDay = d === selDay ? null : d; render(); } },
+          h("span", { class: "stack", style: `height:${perDay[d] ? Math.max(3, perDay[d] / max * 100) : 0}%` },
+            payers.filter(id => paidOn[d]?.[id]).map(id => h("i", { style: `flex:${paidOn[d][id]} 1 0;background:${color(id)}` }))));
+      })),
       h("div", { class: "days-axis muted small" }, h("span", { text: dayLabel(days[0]) }), h("span", { text: dayLabel(days[days.length - 1]) })));
   }
 
