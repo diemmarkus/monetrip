@@ -3,11 +3,11 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signI
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, deleteField, FieldPath }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js?v=93";
-import { settle, balances } from "./settle.js?v=93";
-import { autoIcon, PICKS, categoryOf, CAT_ICON } from "./icons.js?v=93";
-import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=93";
-import { legalDoc } from "./legal.js?v=93";
+import { firebaseConfig } from "./firebase-config.js?v=94";
+import { settle, balances } from "./settle.js?v=94";
+import { autoIcon, PICKS, categoryOf, CAT_ICON } from "./icons.js?v=94";
+import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=94";
+import { legalDoc } from "./legal.js?v=94";
 
 const CURRENCIES = ["EUR","USD","GBP","CHF","CZK","HUF","PLN","TRY","SEK","NOK","DKK","JPY","CAD","AUD","THB"];
 const $ = (s, r = document) => r.querySelector(s);
@@ -63,10 +63,11 @@ const toInput = n => String(n).replace(".", decimalSep());
 const numPh = () => "0" + decimalSep() + "00";
 const isoDay = ts => { const d = new Date(ts); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 const dayKey = e => e.date || isoDay(e.at || Date.now());
+// Days next to today read as words everywhere (list headings, analytics, the expense sheet).
+const dayOffset = n => { const d = new Date(); d.setDate(d.getDate() + n); return isoDay(d); };
+const relDay = key => key === dayOffset(0) ? "today" : key === dayOffset(-1) ? "yesterday" : key === dayOffset(1) ? "tomorrow" : null;
 function dayLabel(key) {
-  const today = isoDay(Date.now()), yest = isoDay(Date.now() - 864e5);
-  if (key === today) return tr("today");
-  if (key === yest) return tr("yesterday");
+  const rel = relDay(key); if (rel) return tr(rel);
   const [y, m, d] = key.split("-").map(Number), dt = new Date(y, m - 1, d);
   return dt.toLocaleDateString(locale(), { weekday: "short", day: "numeric", month: "short", ...(y !== new Date().getFullYear() ? { year: "numeric" } : {}) });
 }
@@ -868,8 +869,8 @@ function tripView() {
   };
   form._syncDate = () => {
     if (!form.xdate.value) form.xdate.value = isoDay(Date.now()); // cleared in the picker: back to today
-    const k = form.xdate.value, today = isoDay(Date.now()), yest = isoDay(Date.now() - 864e5);
-    $("#xdateshow span", form).textContent = k === today ? tr("x.whenToday") : k === yest ? tr("x.whenYesterday") : tr("x.whenOn", { d: dayLabel(k) });
+    const k = form.xdate.value, rel = relDay(k);
+    $("#xdateshow span", form).textContent = rel ? tr("x.when_" + rel) : tr("x.whenOn", { d: dayLabel(k) });
   };
   form._resync = () => {
     form._syncFor(); form._syncDate(); form._syncSentence();

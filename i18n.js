@@ -8,7 +8,7 @@ const DICT = {
     "brand.tag": "Freunde & Moneten",
     loading: "Loading…", someone: "Someone", you: "you", youSuffix: " (you)",
     undo: "Undo", save: "Save", cancel: "Cancel", close: "Close", add: "Add", copy: "Copy", share: "Share…", auto: "Auto",
-    today: "Today", yesterday: "Yesterday",
+    today: "Today", yesterday: "Yesterday", tomorrow: "Tomorrow",
 
     "err.loadTrips": "Couldn't load trips. Reload the page.",
     "err.noCode": "No trip has that code. Check the six characters and try again.",
@@ -99,7 +99,7 @@ const DICT = {
     "x.nobody": "Nobody yet",
     "x.sentence": "{who} paid {when} for {for}", "x.sentenceYou": "{who} paid {when} for {for}",
     "x.youSubj": "You", "x.youObj": "you", "x.forAll": "everyone", "x.forAllChip": "Everyone", "x.forNobody": "nobody yet",
-    "x.whenToday": "today", "x.whenYesterday": "yesterday", "x.whenOn": "on {d}", "x.everyone": "Everyone ({n})", "x.justYou": "Just you",
+    "x.whenToday": "today", "x.when_today": "today", "x.when_yesterday": "yesterday", "x.when_tomorrow": "tomorrow", "x.whenOn": "on {d}", "x.everyone": "Everyone ({n})", "x.justYou": "Just you",
 
     "filter.search": "Search expenses", "filter.person": "Person", "filter.everyone": "Everyone", "filter.kind": "Type",
     "filter.all": "Everything", "filter.paidBy": "Paid by {name}", "filter.paidFor": "Paid for {name}", "filter.paidByYou": "Paid by you", "filter.paidForYou": "Paid for you", "filter.pay": "Payments", "filter.clear": "Clear", "filter.toggle": "Filter expenses",
@@ -144,7 +144,7 @@ const DICT = {
     "brand.tag": "Freunde & Moneten",
     loading: "Wird geladen…", someone: "Jemand", you: "du", youSuffix: " (du)",
     undo: "Rückgängig", save: "Speichern", cancel: "Abbrechen", close: "Schließen", add: "Hinzufügen", copy: "Kopieren", share: "Teilen…", auto: "Auto",
-    today: "Heute", yesterday: "Gestern",
+    today: "Heute", yesterday: "Gestern", tomorrow: "Morgen",
 
     "err.loadTrips": "Reisen konnten nicht geladen werden. Bitte lade die Seite neu.",
     "err.noCode": "Zu diesem Code gibt es keine Reise. Prüf die sechs Zeichen und probier es nochmal.",
@@ -235,7 +235,7 @@ const DICT = {
     "x.nobody": "Noch niemand",
     "x.sentence": "{who} hat {when} für {for} bezahlt", "x.sentenceYou": "{who} hast {when} für {for} bezahlt",
     "x.youSubj": "Du", "x.youObj": "dich", "x.forAll": "alle", "x.forAllChip": "Alle", "x.forNobody": "noch niemanden",
-    "x.whenToday": "heute", "x.whenYesterday": "gestern", "x.whenOn": "am {d}", "x.everyone": "Alle ({n})", "x.justYou": "Nur du",
+    "x.whenToday": "heute", "x.when_today": "heute", "x.when_yesterday": "gestern", "x.when_tomorrow": "morgen", "x.whenOn": "am {d}", "x.everyone": "Alle ({n})", "x.justYou": "Nur du",
 
     "filter.search": "Ausgaben durchsuchen", "filter.person": "Person", "filter.everyone": "Alle Personen", "filter.kind": "Art",
     "filter.all": "Alles", "filter.paidBy": "Bezahlt von {name}", "filter.paidFor": "Bezahlt für {name}", "filter.paidByYou": "Von dir bezahlt", "filter.paidForYou": "Für dich bezahlt", "filter.pay": "Zahlungen", "filter.clear": "Zurücksetzen", "filter.toggle": "Ausgaben filtern",
