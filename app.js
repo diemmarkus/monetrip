@@ -3,11 +3,11 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signI
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, deleteField, FieldPath }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js?v=80";
-import { settle, balances } from "./settle.js?v=80";
-import { autoIcon, PICKS } from "./icons.js?v=80";
-import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=80";
-import { legalDoc } from "./legal.js?v=80";
+import { firebaseConfig } from "./firebase-config.js?v=82";
+import { settle, balances } from "./settle.js?v=82";
+import { autoIcon, PICKS } from "./icons.js?v=82";
+import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=82";
+import { legalDoc } from "./legal.js?v=82";
 
 const CURRENCIES = ["EUR","USD","GBP","CHF","CZK","HUF","PLN","TRY","SEK","NOK","DKK","JPY","CAD","AUD","THB"];
 const $ = (s, r = document) => r.querySelector(s);
@@ -798,13 +798,14 @@ function tripView() {
       h("h2", { id: "sheettitle", text: editing ? tr("x.editTitle") : tr("x.addTitle") }),
       h("button", { class: "primary head-save", type: "submit" }, editing ? tr("x.saveShort") : tr("x.addShort"))),
     xerr,
-    h("div", { class: "field" }, h("label", { for: "xdesc", text: tr("x.whatFor") }),
-      h("div", { class: "desc-row" }, iconBtn, h("input", { id: "xdesc", name: "xdesc", placeholder: tr("x.descPh"), maxlength: 80, autocomplete: "off" }),
+    // No visible labels on description and amount: the placeholders say it; screen readers get aria-labels.
+    h("div", { class: "field" },
+      h("div", { class: "desc-row" }, iconBtn, h("input", { id: "xdesc", name: "xdesc", placeholder: tr("x.descPh"), "aria-label": tr("x.whatFor"), maxlength: 80, autocomplete: "off" }),
         h("input", { type: "hidden", id: "xicon", name: "xicon", value: "" })),
       picks),
-    h("label", {}, tr("x.amount"),
+    h("div", { class: "field" },
       h("span", { class: "money" },
-        h("input", { id: "xamt", name: "xamt", inputmode: "decimal", placeholder: numPh(), autocomplete: "off" }),
+        h("input", { id: "xamt", name: "xamt", inputmode: "decimal", placeholder: numPh(), "aria-label": tr("x.amount"), autocomplete: "off" }),
         h("select", { id: "xccy", name: "xccy", "aria-label": tr("x.currency"), onchange: e => syncRate(e.target.form) }, CURRENCIES.map(c => h("option", { value: c, selected: c === (t.localCurrency || ccy) }, c))))),
     rateBox,
     h("div", { class: "pair" },

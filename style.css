@@ -259,7 +259,7 @@ button.ghost.lang{font-family:var(--mono);font-size:12px;letter-spacing:.06em;pa
 .xform.sheet .sheet-head{top:-14px;margin-top:-14px;padding-top:16px;padding-bottom:2px}
 .xform.sheet .sheet-head h2{font-size:18px}
 .xform.sheet label{gap:2px}
-.xform.sheet input:not([type=checkbox]),.xform.sheet select,.xform.sheet .forbtn{min-height:40px;padding-top:7px;padding-bottom:7px}
+.xform.sheet input:not([type=checkbox]),.xform.sheet select,.xform.sheet .forbtn,.xform.sheet .date-show{min-height:40px;padding-top:7px;padding-bottom:7px}
 .xform.sheet .money input,.xform.sheet .money select{min-height:40px}
 .xform.sheet .fx{padding:6px 10px;gap:4px}
 .xform.sheet .fx-line input{min-height:32px;padding:4px 8px}
