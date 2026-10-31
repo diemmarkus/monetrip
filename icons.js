@@ -19,12 +19,13 @@ const RULES = [
   ["🍺", "beer bier pint drink getränke bar pub kneipe"],
   ["🍹", "cocktail cocktails mojito margarita negroni martini daiquiri caipirinha longdrink"],
   ["🥃", "whisky whiskey scotch bourbon gin rum vodka wodka tequila schnaps schnapps shot shots"],
+  ["🥤", "water wasser mineralwasser cola coke softdrink soft drink juice saft lemonade limonade limo fanta sprite"],
   ["🍷", "wine wein rotwein weißwein weisswein vino sekt champagne champagner heuriger aperol spritz prosecco"],
   ["🍦", "ice cream eis gelato dessert cake kuchen torte strudel kaiserschmarrn baklava waffle waffel crêpe crepe pancake palatschinke"],
   ["🥙", "döner doner kebab kebap falafel lahmacun köfte kofte börek borek pide meze gyros"],
   ["🍕", "pizza pizzeria pasta spaghetti trattoria osteria ristorante risotto gnocchi lasagne lasagna panini panino focaccia antipasti"],
   ["🍣", "sushi ramen noodle noodles nudeln pho dim dumplings thai curry indian chinese vietnamese japanese korean"],
-  ["🍔", "burger food essen dinner abendessen lunch mittagessen restaurant meal snack imbiss takeaway mcdonald supper brunch bistro brasserie gasthaus gasthof wirtshaus beisl schnitzel würstel wurst bratwurst gulasch goulash knödel steak grill bbq chicken hähnchen wings chips haggis roast tapas tacos taco burrito mexican salad salat soup suppe sandwich picnic streetfood dinieren"],
+  ["🍔", "burger food essen dinner abendessen lunch mittagessen restaurant meal snack imbiss takeaway mcdonald supper brunch bistro brasserie gasthaus gasthof wirtshaus beisl schnitzel würstel wurst bratwurst gulasch goulash knödel steak grill bbq pulled pork schwein ribs spareribs beef rind lamb lamm chicken hähnchen wings chips haggis roast tapas tacos taco burrito mexican salad salat soup suppe sandwich picnic streetfood dinieren"],
   ["🛒", "groceries grocery supermarket supermarkt einkauf einkaufen lidl aldi billa spar rewe edeka hofer penny merkur tesco sainsbury coop migros carrefour mercadona conad monoprix"],
   ["🏰", "castle schloss burg festung fortress palace palast palais"],
   ["🎟️", "museum entry eintritt tour tickets concert konzert show cinema kino theater theatre cathedral kathedrale church kirche abbey abtei gallery galerie zoo aquarium sightseeing excursion ausflug führung guide monument denkmal tower turm exhibition ausstellung attraction distillery destillerie"],
@@ -57,7 +58,7 @@ export function autoIcon(desc) {
   if (best && FOOD_DRINK.has(best.icon) && ACTIVITY_HINTS.some(w => hasWord(d, w))) return "🎟️";
   return best ? best.icon : DEFAULT_ICON;
 }
-const FOOD_DRINK = new Set(["☕", "🍺", "🍷", "🍹", "🥃", "🍦", "🥙", "🍕", "🍣", "🍔"]);
+const FOOD_DRINK = new Set(["🥤", "☕", "🍺", "🍷", "🍹", "🥃", "🍦", "🥙", "🍕", "🍣", "🍔"]);
 const ACTIVITY_HINTS = "tour tours führung tickets ticket eintritt entry tasting verkostung class kurs workshop".split(" ");
 // The word appears at the start of a word in the (padded, lower-cased) description.
 function hasWord(d, w) { let i = d.indexOf(w); while (i > 0 && /[a-zäöüß]/.test(d[i - 1])) i = d.indexOf(w, i + 1); return i > 0; }
@@ -65,13 +66,14 @@ function hasWord(d, w) { let i = d.indexOf(w); while (i > 0 && /[a-zäöüß]/.t
 export const iconFor = e => e.icon || autoIcon(e.desc);
 
 // What the picker offers for manual override.
-export const PICKS = ["🍔", "🍕", "🥙", "🍣", "☕", "🍺", "🍷", "🍹", "🥃", "🍦", "🛒", "🏨", "⛺", "✈️", "🚆", "🚌", "🚕", "⛴️", "🚗", "⛽", "🅿️", "🏰", "🎟️", "⛷️", "🏊", "🎉", "🛍️", "💊", "📶", "💶", "💰"];
+export const PICKS = ["🍔", "🍕", "🥙", "🍣", "☕", "🍺", "🍷", "🍹", "🥃", "🥤", "🍦", "🛒", "🏨", "⛺", "✈️", "🚆", "🚌", "🚕", "⛴️", "🚗", "⛽", "🅿️", "🏰", "🎟️", "⛷️", "🏊", "🎉", "🛍️", "💊", "📶", "💶", "💰"];
 
 // Categories for the analytics page, derived from the icon (which itself comes from the title,
 // or the icon someone picked). Anything not listed here, 💰 included, counts as "other".
 const CATS = {
-  food: "🍔🍕🥙🍣🍦☕", drinks: "🍺🍷🍹🥃", groceries: "🛒", stay: "🏨⛺",
-  transport: "✈️🚆🚌🚕⛴️🚗⛽🅿️", fun: "🏰🎟️⛷️🏊🎉", shopping: "🛍️", health: "💊", phone: "📶", cash: "💶",
+  food: "🍔🍕🥙🍣🍦☕🍝🥐🥗🍜🍲🥩🍗🍖🥓🥪🌮🌯🥘🍛🍱🍤🥟🍞🥨🥯🧀🍳🥞🧇🍰🎂🧁🍩🍪🍫🍬🍭🥧🍟🌭🫕🥙🍿🥑🍇🍉🍓🍎🍌🍊🥐🍽️🍴",
+  drinks: "🍺🍷🍹🥃🍻🥂🍾🍸🍶🧉🥤🧃🧋💧🍵🫖", groceries: "🛒", stay: "🏨⛺🏠🏡🛏️🏕️",
+  transport: "✈️🚆🚌🚕⛴️🚗⛽🅿️🚇🚊🚋🚄🚅🛫🛬🚢🚤🛵🚲🛴🚙🚐🚖", fun: "🏰🎟️⛷️🏊🎉🎫🏛️⛪🎭🎨🎬🎤🎵🎳🏖️🎢🎡🏟️🗼🗽⛰️🏔️🥾", shopping: "🛍️", health: "💊", phone: "📶", cash: "💶",
 };
 const SEG = new Intl.Segmenter();
 const CAT_OF = {};
@@ -79,3 +81,5 @@ for (const [cat, icons] of Object.entries(CATS)) for (const { segment } of SEG.s
 // The icon shown for each category in the legend.
 export const CAT_ICON = { food: "🍔", drinks: "🍺", groceries: "🛒", stay: "🏨", transport: "🚆", fun: "🎟️", shopping: "🛍️", health: "💊", phone: "📶", cash: "💶", other: "💰" };
 export const categoryOf = icon => CAT_OF[icon] || "other";
+// An icon without a category (a hand-picked 🦄, or 💰) falls back to what the title says.
+export const categoryFor = (icon, desc) => { const c = categoryOf(icon); return c !== "other" ? c : categoryOf(autoIcon(desc)); };

@@ -3,11 +3,11 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signI
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, deleteField, FieldPath }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js?v=102";
-import { settle, balances } from "./settle.js?v=102";
-import { autoIcon, PICKS, categoryOf, CAT_ICON } from "./icons.js?v=102";
-import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=102";
-import { legalDoc } from "./legal.js?v=102";
+import { firebaseConfig } from "./firebase-config.js?v=103";
+import { settle, balances } from "./settle.js?v=103";
+import { autoIcon, PICKS, categoryFor, CAT_ICON } from "./icons.js?v=103";
+import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=103";
+import { legalDoc } from "./legal.js?v=103";
 
 const CURRENCIES = ["EUR","USD","GBP","CHF","CZK","HUF","PLN","TRY","SEK","NOK","DKK","JPY","CAD","AUD","THB"];
 const $ = (s, r = document) => r.querySelector(s);
@@ -1029,7 +1029,7 @@ function analyticsView(t, spends, people) {
   const total = spends.reduce((s, e) => s + base(e), 0);
   // Every category with its sum, biggest first. Colours follow this full ranking, so folding never repaints a slice.
   const by = {};
-  for (const e of spends) { const c = categoryOf(iconFor(t, e)); (by[c] ||= { key: c, sum: 0, n: 0 }); by[c].sum += base(e); by[c].n++; }
+  for (const e of spends) { const c = categoryFor(iconFor(t, e), e.desc); (by[c] ||= { key: c, sum: 0, n: 0 }); by[c].sum += base(e); by[c].n++; }
   const cats = Object.values(by).sort((a, b) => (a.key === "other") - (b.key === "other") || b.sum - a.sum);
   let slot = 0;
   for (const c of cats) c.color = c.key === "other" || slot >= CAT_COLORS ? "var(--cat-other)" : `var(--cat-${++slot})`;
@@ -1099,7 +1099,7 @@ function analyticsMore(t, spends, cats, total, people, base, label, pct) {
   const maxSum = Math.max(...bySum.map(c => c.sum));
   // Tap a category to unfold its expenses (newest first); tap again to fold.
   const catOpen = bySum.some(c => c.key === ui.anaCat) ? ui.anaCat : null;
-  const catItems = c => spends.filter(e => categoryOf(iconFor(t, e)) === c.key)
+  const catItems = c => spends.filter(e => categoryFor(iconFor(t, e), e.desc) === c.key)
     .sort((a, b) => dayKey(b).localeCompare(dayKey(a)) || (b.at || 0) - (a.at || 0))
     .map(e => h("div", { class: "cat-x" },
       h("span", { class: "xi", "aria-hidden": "true", text: iconFor(t, e) }),
