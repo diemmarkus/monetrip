@@ -3,11 +3,11 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signI
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, deleteField, FieldPath }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js?v=90";
-import { settle, balances } from "./settle.js?v=90";
-import { autoIcon, PICKS, categoryOf, CAT_ICON } from "./icons.js?v=90";
-import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=90";
-import { legalDoc } from "./legal.js?v=90";
+import { firebaseConfig } from "./firebase-config.js?v=91";
+import { settle, balances } from "./settle.js?v=91";
+import { autoIcon, PICKS, categoryOf, CAT_ICON } from "./icons.js?v=91";
+import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=91";
+import { legalDoc } from "./legal.js?v=91";
 
 const CURRENCIES = ["EUR","USD","GBP","CHF","CZK","HUF","PLN","TRY","SEK","NOK","DKK","JPY","CAD","AUD","THB"];
 const $ = (s, r = document) => r.querySelector(s);
@@ -1122,12 +1122,6 @@ function analyticsMore(t, spends, cats, total, people, base, label, pct) {
       h("div", { class: "days-axis muted small" }, h("span", { text: dayLabel(days[0]) }), h("span", { text: dayLabel(days[days.length - 1]) })));
   }
 
-  // Biggest expenses.
-  const top = [...spends].sort((a, b) => base(b) - base(a)).slice(0, 5);
-  out.push(h("h3", { text: tr("ana.top") }), h("div", { class: "list" }, top.map(e => h("div", { class: "li" },
-    h("span", {}, h("span", { "aria-hidden": "true", text: iconFor(t, e) + " " }), h("b", { text: e.desc })),
-    h("span", { class: "num", text: money(base(e), ccy) }),
-    h("span", { class: "sub", text: `${dayLabel(dayKey(e))} · ${memberName(t, e.paidBy)} · ${pct(base(e))} %` })))));
   return out;
 }
 
