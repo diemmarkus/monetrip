@@ -17,7 +17,9 @@ const RULES = [
   ["💶", "atm cash bargeld fee gebühr trinkgeld tip"],
   ["☕", "coffee kaffee café cafe espresso cappuccino latte frühstück breakfast"],
   ["🍺", "beer bier pint drink getränke bar pub kneipe"],
-  ["🍷", "wine wein aperol spritz cocktail prosecco"],
+  ["🍹", "cocktail cocktails mojito margarita negroni martini daiquiri caipirinha longdrink"],
+  ["🥃", "whisky whiskey scotch bourbon gin rum vodka wodka tequila schnaps schnapps shot shots"],
+  ["🍷", "wine wein aperol spritz prosecco"],
   ["🍦", "ice cream eis gelato dessert"],
   ["🥙", "döner doner kebab kebap falafel"],
   ["🍕", "pizza pizzeria pasta spaghetti"],
@@ -57,12 +59,12 @@ export function autoIcon(desc) {
 export const iconFor = e => e.icon || autoIcon(e.desc);
 
 // What the picker offers for manual override.
-export const PICKS = ["🍔", "🍕", "🥙", "🍣", "☕", "🍺", "🍷", "🍦", "🛒", "🏨", "⛺", "✈️", "🚆", "🚌", "🚕", "⛴️", "🚗", "⛽", "🅿️", "🏰", "🎟️", "⛷️", "🏊", "🎉", "🛍️", "💊", "📶", "💶", "💰"];
+export const PICKS = ["🍔", "🍕", "🥙", "🍣", "☕", "🍺", "🍷", "🍹", "🥃", "🍦", "🛒", "🏨", "⛺", "✈️", "🚆", "🚌", "🚕", "⛴️", "🚗", "⛽", "🅿️", "🏰", "🎟️", "⛷️", "🏊", "🎉", "🛍️", "💊", "📶", "💶", "💰"];
 
 // Categories for the analytics page, derived from the icon (which itself comes from the title,
 // or the icon someone picked). Anything not listed here, 💰 included, counts as "other".
 const CATS = {
-  food: "🍔🍕🥙🍣🍦☕", drinks: "🍺🍷", groceries: "🛒", stay: "🏨⛺",
+  food: "🍔🍕🥙🍣🍦☕", drinks: "🍺🍷🍹🥃", groceries: "🛒", stay: "🏨⛺",
   transport: "✈️🚆🚌🚕⛴️🚗⛽🅿️", fun: "🏰🎟️⛷️🏊🎉", shopping: "🛍️", health: "💊", phone: "📶", cash: "💶",
 };
 const SEG = new Intl.Segmenter();
