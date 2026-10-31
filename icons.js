@@ -24,7 +24,8 @@ const RULES = [
   ["🍣", "sushi ramen"],
   ["🍔", "burger food essen dinner abendessen lunch mittagessen restaurant meal snack imbiss takeaway mcdonald"],
   ["🛒", "groceries grocery supermarket supermarkt einkauf einkaufen lidl aldi billa spar rewe edeka"],
-  ["🎟️", "museum entry eintritt tour tickets concert konzert show cinema kino theater theatre"],
+  ["🏰", "castle schloss burg festung fortress palace palast palais"],
+  ["🎟️", "museum entry eintritt tour tickets concert konzert show cinema kino theater theatre cathedral kathedrale church kirche abbey abtei gallery galerie zoo aquarium sightseeing excursion ausflug führung guide monument denkmal tower turm exhibition ausstellung attraction"],
   ["⛷️", "ski skipass lift"],
   ["🏊", "pool spa therme sauna beach strand"],
   ["🎉", "party club disco"],
@@ -56,13 +57,13 @@ export function autoIcon(desc) {
 export const iconFor = e => e.icon || autoIcon(e.desc);
 
 // What the picker offers for manual override.
-export const PICKS = ["🍔", "🍕", "🥙", "🍣", "☕", "🍺", "🍷", "🍦", "🛒", "🏨", "⛺", "✈️", "🚆", "🚌", "🚕", "⛴️", "🚗", "⛽", "🅿️", "🎟️", "⛷️", "🏊", "🎉", "🛍️", "💊", "📶", "💶", "💰"];
+export const PICKS = ["🍔", "🍕", "🥙", "🍣", "☕", "🍺", "🍷", "🍦", "🛒", "🏨", "⛺", "✈️", "🚆", "🚌", "🚕", "⛴️", "🚗", "⛽", "🅿️", "🏰", "🎟️", "⛷️", "🏊", "🎉", "🛍️", "💊", "📶", "💶", "💰"];
 
 // Categories for the analytics page, derived from the icon (which itself comes from the title,
 // or the icon someone picked). Anything not listed here, 💰 included, counts as "other".
 const CATS = {
   food: "🍔🍕🥙🍣🍦☕", drinks: "🍺🍷", groceries: "🛒", stay: "🏨⛺",
-  transport: "✈️🚆🚌🚕⛴️🚗⛽🅿️", fun: "🎟️⛷️🏊🎉", shopping: "🛍️", health: "💊", phone: "📶", cash: "💶",
+  transport: "✈️🚆🚌🚕⛴️🚗⛽🅿️", fun: "🏰🎟️⛷️🏊🎉", shopping: "🛍️", health: "💊", phone: "📶", cash: "💶",
 };
 const SEG = new Intl.Segmenter();
 const CAT_OF = {};

@@ -3,11 +3,11 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signI
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, deleteField, FieldPath }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js?v=91";
-import { settle, balances } from "./settle.js?v=91";
-import { autoIcon, PICKS, categoryOf, CAT_ICON } from "./icons.js?v=91";
-import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=91";
-import { legalDoc } from "./legal.js?v=91";
+import { firebaseConfig } from "./firebase-config.js?v=92";
+import { settle, balances } from "./settle.js?v=92";
+import { autoIcon, PICKS, categoryOf, CAT_ICON } from "./icons.js?v=92";
+import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=92";
+import { legalDoc } from "./legal.js?v=92";
 
 const CURRENCIES = ["EUR","USD","GBP","CHF","CZK","HUF","PLN","TRY","SEK","NOK","DKK","JPY","CAD","AUD","THB"];
 const $ = (s, r = document) => r.querySelector(s);
