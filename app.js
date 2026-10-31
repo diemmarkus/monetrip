@@ -3,11 +3,11 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signI
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, deleteField, FieldPath }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js?v=85";
-import { settle, balances } from "./settle.js?v=85";
-import { autoIcon, PICKS, categoryOf, CAT_ICON } from "./icons.js?v=85";
-import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=85";
-import { legalDoc } from "./legal.js?v=85";
+import { firebaseConfig } from "./firebase-config.js?v=88";
+import { settle, balances } from "./settle.js?v=88";
+import { autoIcon, PICKS, categoryOf, CAT_ICON } from "./icons.js?v=88";
+import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=88";
+import { legalDoc } from "./legal.js?v=88";
 
 const CURRENCIES = ["EUR","USD","GBP","CHF","CZK","HUF","PLN","TRY","SEK","NOK","DKK","JPY","CAD","AUD","THB"];
 const $ = (s, r = document) => r.querySelector(s);
@@ -272,7 +272,7 @@ const iconFor = (t, e) => e.icon || suggestIcon(t, e.desc);
 function resetExpenseForm() {
   const f = app.querySelector(".xform"); if (!f) return;
   f.reset(); f.xrate.value = ""; f.xicon.value = ""; f.xdate.value = isoDay(Date.now()); delete f.dataset.dirty;
-  ui.forOpen = false; f.querySelector("#forlist").hidden = true; f.querySelector("#forbtn").setAttribute("aria-expanded", "false");
+  ui.forOpen = false; ui.fxOpen = false; f.querySelector("#forlist").hidden = true; f.querySelector("#forbtn").setAttribute("aria-expanded", "false");
   f._resync?.(); f._syncIcon?.();
 }
 function openSheet() {
@@ -729,21 +729,26 @@ function tripView() {
 
   /* add expense */
   const xerr = h("p", { class: "err", hidden: true });
-  const rateNote = h("span", { class: "fx-conv" });
+  // Next to the amount: what it comes to in the trip currency. Tapping it shows the editable rate;
+  // without a known rate the rate line is always open (it has to be filled in).
+  const fxSeg = h("button", { type: "button", class: "fx-seg", hidden: true, "aria-label": tr("x.rate"), "aria-controls": "fxbox",
+    onclick: ev => { ui.fxOpen = !ui.fxOpen; syncFx(ev.currentTarget.form); if (ui.fxOpen) $("#xrate")?.focus(); } });
   const manualNote = h("p", { class: "fx-info", hidden: true, text: tr("x.noRate") });
-  const rateBox = h("div", { class: "fx", hidden: true },
+  const rateBox = h("div", { class: "fx", id: "fxbox", hidden: true },
     h("div", { class: "fx-row" },
-      h("label", { class: "fx-line", for: "xrate" }, h("span", { id: "fxfrom" }), h("input", { id: "xrate", name: "xrate", inputmode: "decimal", placeholder: numPh(), "aria-label": tr("x.rate") }), h("span", { text: ccy })),
-      rateNote),
+      h("label", { class: "fx-line", for: "xrate" }, h("span", { id: "fxfrom" }), h("input", { id: "xrate", name: "xrate", inputmode: "decimal", placeholder: numPh(), "aria-label": tr("x.rate") }), h("span", { text: ccy }))),
     manualNote);
-  const preview = f => {
-    const c = f.xccy.value; if (c === ccy) return;
+  const syncFx = f => {
+    const c = f.xccy.value, a = c === ccy ? null : autoRate(c, ccy);
+    fxSeg.hidden = c === ccy; rateBox.hidden = c === ccy || (!ui.fxOpen && !!a);
+    fxSeg.setAttribute("aria-expanded", String(!rateBox.hidden));
     const amt = parseNum(f.xamt.value), r = parseNum(f.xrate.value);
-    rateNote.textContent = amt > 0 && r > 0 ? "≈ " + money(Math.round(amt * r * 100), ccy) : "";
-    manualNote.hidden = !!autoRate(c, ccy);
+    fxSeg.textContent = amt > 0 && r > 0 ? "≈ " + money(Math.round(amt * r * 100), ccy) : "→ " + ccy;
+    manualNote.hidden = !!a;
   };
+  const preview = f => syncFx(f);
   const syncRate = f => {
-    const c = f.xccy.value; rateBox.hidden = c === ccy; f.xrate.required = c !== ccy;
+    const c = f.xccy.value; f.xrate.required = c !== ccy;
     $("#fxfrom", rateBox).textContent = "1 " + c + " =";
     const a = c === ccy ? null : autoRate(c, ccy);
     f.dataset.auto = a ? "1" : "";
@@ -806,24 +811,34 @@ function tripView() {
     h("div", { class: "field" },
       h("span", { class: "money" },
         h("input", { id: "xamt", name: "xamt", inputmode: "decimal", placeholder: numPh(), "aria-label": tr("x.amount"), autocomplete: "off" }),
-        h("select", { id: "xccy", name: "xccy", "aria-label": tr("x.currency"), onchange: e => syncRate(e.target.form) }, CURRENCIES.map(c => h("option", { value: c, selected: c === (t.localCurrency || ccy) }, c))))),
+        h("select", { id: "xccy", name: "xccy", "aria-label": tr("x.currency"), onchange: e => syncRate(e.target.form) }, CURRENCIES.map(c => h("option", { value: c, selected: c === (t.localCurrency || ccy) }, c))),
+        fxSeg)),
     rateBox,
-    h("div", { class: "pair" },
-      h("label", {}, tr("x.paidBy"), h("select", { id: "xpaid", name: "xpaid" }, byName.map(id => h("option", { value: id, selected: id === defaultPaid }, memberName(t, id) + (id === mine ? tr("youSuffix") : ""))))),
-      // Shows "Today" / "Yesterday" / a short date; the native date input lies invisibly on top, so a tap opens its picker.
-      h("label", {}, tr("x.date"), h("span", { class: "date-field" },
-        (() => { const d = h("span", { class: "date-show", id: "xdateshow", "aria-hidden": "true" }, h("span", { text: tr("today") }));
-          d.insertAdjacentHTML("beforeend", '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>'); return d; })(),
-        h("input", { id: "xdate", name: "xdate", type: "date", value: isoDay(Date.now()), max: isoDay(Date.now() + 864e5 * 366),
+    // "You paid today for everyone": who, when and for whom as one sentence of tappable pills.
+    // The pills are the real controls (select, native date input, the For button); form._syncSentence
+    // puts the words around them for the chosen language and payer.
+    h("p", { class: "sentence", id: "xsentence" },
+      h("select", { id: "xpaid", name: "xpaid", class: "pill", "aria-label": tr("x.paidBy"), onchange: () => form._syncSentence() },
+        byName.map(id => h("option", { value: id, selected: id === defaultPaid }, id === mine ? tr("x.youSubj") : memberName(t, id)))),
+      h("span", { class: "date-field pill" },
+        h("span", { class: "date-show", id: "xdateshow", "aria-hidden": "true" }, h("span", { text: tr("x.whenToday") })),
+        h("input", { id: "xdate", name: "xdate", type: "date", "aria-label": tr("x.date"), value: isoDay(Date.now()), max: isoDay(Date.now() + 864e5 * 366),
           onclick: e => { try { e.target.showPicker?.(); } catch {} },
-          onchange: () => form._syncDate() })))),
-    h("div", { class: "forfield" },
-      h("span", { class: "flabel", id: "forlbl", text: tr("x.for") }),
-      h("button", { type: "button", class: "forbtn", id: "forbtn", "aria-labelledby": "forlbl forsum", "aria-controls": "forlist", "aria-expanded": String(!!ui.forOpen),
+          onchange: () => form._syncDate() })),
+      h("button", { type: "button", class: "forbtn pill", id: "forbtn", "aria-label": tr("x.for"), "aria-controls": "forlist", "aria-expanded": String(!!ui.forOpen),
         onclick: ev => { ui.forOpen = !ui.forOpen; const b = ev.currentTarget; b.setAttribute("aria-expanded", String(ui.forOpen)); b.form.querySelector("#forlist").hidden = !ui.forOpen; } },
-        h("span", { id: "forsum" }), h("span", { class: "chev", "aria-hidden": "true" })),
-      h("div", { class: "checks", id: "forlist", role: "group", "aria-label": tr("x.splitBetween"), hidden: !ui.forOpen },
-        byName.map(id => h("label", {}, h("input", { type: "checkbox", name: "xsplit", value: id, checked: defaultSplit.has(id), id: "xs-" + id }), memberName(t, id))))),
+        h("span", { id: "forsum" }), h("span", { class: "chev", "aria-hidden": "true" }))),
+    // Who shares this expense: toggle chips (real checkboxes inside, hidden), you first, plus "Everyone".
+    h("div", { class: "checks people", id: "forlist", role: "group", "aria-label": tr("x.splitBetween"), hidden: !ui.forOpen },
+      h("button", { type: "button", class: "allchip", id: "forall", "aria-pressed": "false", onclick: ev => {
+          const boxes = [...ev.currentTarget.form.querySelectorAll("input[name=xsplit]")], all = boxes.every(b => b.checked);
+          boxes.forEach(b => { b.checked = !all; });
+          boxes[0]?.dispatchEvent(new Event("input", { bubbles: true }));
+        } }, tr("x.forAllChip")),
+      [mine, ...byName.filter(id => id !== mine)].filter(Boolean).map(id => h("label", { class: "pchip" },
+        h("input", { type: "checkbox", name: "xsplit", value: id, checked: defaultSplit.has(id), id: "xs-" + id }),
+        h("span", { class: "tick", "aria-hidden": "true" }),
+        h("span", { text: id === mine ? tr("x.youSubj") : memberName(t, id) })))),
   );
   if (editing) form.classList.add("editing");
   form._syncIcon = () => {
@@ -835,19 +850,30 @@ function tripView() {
   form._syncIcon();
   form._syncFor = () => {
     const on = [...form.querySelectorAll("input[name=xsplit]")].filter(c => c.checked).map(c => c.value);
-    const names = on.map(id => id === mine ? tr("you") : memberName(t, id));
+    $("#forall", form)?.setAttribute("aria-pressed", String(on.length === ids.length));
+    const names = on.map(id => id === mine ? tr("x.youObj") : memberName(t, id));
     const list = names.length <= 3 ? names.join(", ") : names.slice(0, 2).join(", ") + ` +${names.length - 2}`;
-    $("#forsum", form).textContent = !on.length ? tr("x.nobody")
-      : on.length === ids.length ? (ids.length > 1 ? tr("x.everyone", { n: ids.length }) : tr("x.justYou"))
-      : on[0] === mine ? list.charAt(0).toLocaleUpperCase(locale()) + list.slice(1) : list;
+    $("#forsum", form).textContent = !on.length ? tr("x.forNobody")
+      : on.length === ids.length && ids.length > 1 ? tr("x.forAll", { n: ids.length }) : list;
+  };
+  // Words between the pills. German needs "hast" for "Du" and puts the verb at the end, so the
+  // whole template is per language: {who} {when} {for} mark where the pills go.
+  form._syncSentence = () => {
+    const p = $("#xsentence", form), pills = { who: form.xpaid, when: $(".date-field", form), for: $("#forbtn", form) };
+    const tpl = tr(form.xpaid.value === mine ? "x.sentenceYou" : "x.sentence");
+    p.replaceChildren(...tpl.split(/(\{who\}|\{when\}|\{for\})/).filter(Boolean).map(part => {
+      const k = part.match(/^\{(\w+)\}$/)?.[1];
+      return k ? pills[k] : h("span", { class: "sw", text: part });
+    }));
   };
   form._syncDate = () => {
     if (!form.xdate.value) form.xdate.value = isoDay(Date.now()); // cleared in the picker: back to today
-    $("#xdateshow span", form).textContent = dayLabel(form.xdate.value);
+    const k = form.xdate.value, today = isoDay(Date.now()), yest = isoDay(Date.now() - 864e5);
+    $("#xdateshow span", form).textContent = k === today ? tr("x.whenToday") : k === yest ? tr("x.whenYesterday") : tr("x.whenOn", { d: dayLabel(k) });
   };
   form._resync = () => {
-    form._syncFor(); form._syncDate();
-    const c = form.xccy.value; rateBox.hidden = c === ccy; form.xrate.required = c !== ccy;
+    form._syncFor(); form._syncDate(); form._syncSentence();
+    const c = form.xccy.value; form.xrate.required = c !== ccy;
     $("#fxfrom", rateBox).textContent = "1 " + c + " =";
     const a = c === ccy ? null : autoRate(c, ccy);
     if (a && !form.xrate.value) form.xrate.value = toInput(a);
