@@ -3,11 +3,11 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signI
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, deleteField, FieldPath }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js?v=98";
-import { settle, balances } from "./settle.js?v=98";
-import { autoIcon, PICKS, categoryOf, CAT_ICON } from "./icons.js?v=98";
-import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=98";
-import { legalDoc } from "./legal.js?v=98";
+import { firebaseConfig } from "./firebase-config.js?v=99";
+import { settle, balances } from "./settle.js?v=99";
+import { autoIcon, PICKS, categoryOf, CAT_ICON } from "./icons.js?v=99";
+import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=99";
+import { legalDoc } from "./legal.js?v=99";
 
 const CURRENCIES = ["EUR","USD","GBP","CHF","CZK","HUF","PLN","TRY","SEK","NOK","DKK","JPY","CAD","AUD","THB"];
 const $ = (s, r = document) => r.querySelector(s);
@@ -1117,14 +1117,15 @@ function analyticsMore(t, spends, cats, total, people, base, label, pct) {
   // Spending per day, stacked by who paid; tap a day for its amount and who paid what.
   if (days.length > 1) {
     const max = Math.max(...days.map(d => perDay[d] || 0)), selDay = days.includes(ui.anaDay) ? ui.anaDay : null;
-    // One colour per person, in name order over the whole trip, so a person keeps their colour whatever is shown.
     const order = Object.keys(t.members || {}).sort((a, b) => memberName(t, a).localeCompare(memberName(t, b), locale(), { sensitivity: "base" }));
-    const color = id => { const i = order.indexOf(id); return i >= 0 && i < CAT_COLORS ? `var(--cat-${i + 1})` : "var(--cat-other)"; };
+
     const paidOn = {};
     for (const e of spends) { const d = dayKey(e); (paidOn[d] ||= {}); paidOn[d][e.paidBy] = (paidOn[d][e.paidBy] || 0) + base(e); }
     // Highest spender first: in the legend, at the bottom of each bar and first in the breakdown.
     const paidTotal = id => days.reduce((sum, d) => sum + (paidOn[d]?.[id] || 0), 0);
     const payers = order.filter(id => paidTotal(id) > 0).sort((a, b) => paidTotal(b) - paidTotal(a));
+    // Colours follow that ranking too: the top spender gets the first colour (teal), the next orange, and so on.
+    const color = id => { const i = payers.indexOf(id); return i >= 0 && i < CAT_COLORS ? `var(--cat-${i + 1})` : "var(--cat-other)"; };
     const who = d => payers.filter(id => paidOn[d]?.[id]).map(id => `${memberName(t, id)} ${money(paidOn[d][id], ccy)}`).join(" · ");
     out.push(h("h3", { text: tr("ana.days") }),
       payers.length > 1 ? h("div", { class: "day-legend" }, payers.map(id => h("span", {}, h("i", { class: "dot", style: `background:${color(id)}` }), memberName(t, id)))) : null,
