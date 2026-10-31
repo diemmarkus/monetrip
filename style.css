@@ -364,3 +364,9 @@ html.booting #app button:not(.trip):not(.back),html.booting #app input,html.boot
 .people .allchip{color:var(--accent-text);border-style:dashed}
 .people .allchip[aria-pressed="true"]{border-style:solid;border-color:var(--accent-text)}
 @media (prefers-reduced-motion:no-preference){.people .pchip{transition:background .12s,border-color .12s}}
+
+/* Amount row: converted amount in the trip currency next to the currency */
+.money select{flex-basis:78px;width:78px}
+.money .fx-seg{flex:0 0 auto;min-height:0;margin:0;padding:0 10px;border:none;border-left:1px solid var(--line);border-radius:0;
+  background:var(--accent-soft);color:var(--accent-text);font:600 14px/1 var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.money .fx-seg[aria-expanded="true"]{color:var(--accent-ink);background:var(--accent)}

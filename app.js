@@ -3,11 +3,11 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signI
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, deleteField, FieldPath }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js?v=86";
-import { settle, balances } from "./settle.js?v=86";
-import { autoIcon, PICKS } from "./icons.js?v=86";
-import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=86";
-import { legalDoc } from "./legal.js?v=86";
+import { firebaseConfig } from "./firebase-config.js?v=87";
+import { settle, balances } from "./settle.js?v=87";
+import { autoIcon, PICKS } from "./icons.js?v=87";
+import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=87";
+import { legalDoc } from "./legal.js?v=87";
 
 const CURRENCIES = ["EUR","USD","GBP","CHF","CZK","HUF","PLN","TRY","SEK","NOK","DKK","JPY","CAD","AUD","THB"];
 const $ = (s, r = document) => r.querySelector(s);
@@ -272,7 +272,7 @@ const iconFor = (t, e) => e.icon || suggestIcon(t, e.desc);
 function resetExpenseForm() {
   const f = app.querySelector(".xform"); if (!f) return;
   f.reset(); f.xrate.value = ""; f.xicon.value = ""; f.xdate.value = isoDay(Date.now()); delete f.dataset.dirty;
-  ui.forOpen = false; f.querySelector("#forlist").hidden = true; f.querySelector("#forbtn").setAttribute("aria-expanded", "false");
+  ui.forOpen = false; ui.fxOpen = false; f.querySelector("#forlist").hidden = true; f.querySelector("#forbtn").setAttribute("aria-expanded", "false");
   f._resync?.(); f._syncIcon?.();
 }
 function openSheet() {
@@ -729,21 +729,26 @@ function tripView() {
 
   /* add expense */
   const xerr = h("p", { class: "err", hidden: true });
-  const rateNote = h("span", { class: "fx-conv" });
+  // Next to the amount: what it comes to in the trip currency. Tapping it shows the editable rate;
+  // without a known rate the rate line is always open (it has to be filled in).
+  const fxSeg = h("button", { type: "button", class: "fx-seg", hidden: true, "aria-label": tr("x.rate"), "aria-controls": "fxbox",
+    onclick: ev => { ui.fxOpen = !ui.fxOpen; syncFx(ev.currentTarget.form); if (ui.fxOpen) $("#xrate")?.focus(); } });
   const manualNote = h("p", { class: "fx-info", hidden: true, text: tr("x.noRate") });
-  const rateBox = h("div", { class: "fx", hidden: true },
+  const rateBox = h("div", { class: "fx", id: "fxbox", hidden: true },
     h("div", { class: "fx-row" },
-      h("label", { class: "fx-line", for: "xrate" }, h("span", { id: "fxfrom" }), h("input", { id: "xrate", name: "xrate", inputmode: "decimal", placeholder: numPh(), "aria-label": tr("x.rate") }), h("span", { text: ccy })),
-      rateNote),
+      h("label", { class: "fx-line", for: "xrate" }, h("span", { id: "fxfrom" }), h("input", { id: "xrate", name: "xrate", inputmode: "decimal", placeholder: numPh(), "aria-label": tr("x.rate") }), h("span", { text: ccy }))),
     manualNote);
-  const preview = f => {
-    const c = f.xccy.value; if (c === ccy) return;
+  const syncFx = f => {
+    const c = f.xccy.value, a = c === ccy ? null : autoRate(c, ccy);
+    fxSeg.hidden = c === ccy; rateBox.hidden = c === ccy || (!ui.fxOpen && !!a);
+    fxSeg.setAttribute("aria-expanded", String(!rateBox.hidden));
     const amt = parseNum(f.xamt.value), r = parseNum(f.xrate.value);
-    rateNote.textContent = amt > 0 && r > 0 ? "≈ " + money(Math.round(amt * r * 100), ccy) : "";
-    manualNote.hidden = !!autoRate(c, ccy);
+    fxSeg.textContent = amt > 0 && r > 0 ? "≈ " + money(Math.round(amt * r * 100), ccy) : "→ " + ccy;
+    manualNote.hidden = !!a;
   };
+  const preview = f => syncFx(f);
   const syncRate = f => {
-    const c = f.xccy.value; rateBox.hidden = c === ccy; f.xrate.required = c !== ccy;
+    const c = f.xccy.value; f.xrate.required = c !== ccy;
     $("#fxfrom", rateBox).textContent = "1 " + c + " =";
     const a = c === ccy ? null : autoRate(c, ccy);
     f.dataset.auto = a ? "1" : "";
@@ -806,7 +811,8 @@ function tripView() {
     h("div", { class: "field" },
       h("span", { class: "money" },
         h("input", { id: "xamt", name: "xamt", inputmode: "decimal", placeholder: numPh(), "aria-label": tr("x.amount"), autocomplete: "off" }),
-        h("select", { id: "xccy", name: "xccy", "aria-label": tr("x.currency"), onchange: e => syncRate(e.target.form) }, CURRENCIES.map(c => h("option", { value: c, selected: c === (t.localCurrency || ccy) }, c))))),
+        h("select", { id: "xccy", name: "xccy", "aria-label": tr("x.currency"), onchange: e => syncRate(e.target.form) }, CURRENCIES.map(c => h("option", { value: c, selected: c === (t.localCurrency || ccy) }, c))),
+        fxSeg)),
     rateBox,
     // "You paid today for everyone": who, when and for whom as one sentence of tappable pills.
     // The pills are the real controls (select, native date input, the For button); form._syncSentence
@@ -867,7 +873,7 @@ function tripView() {
   };
   form._resync = () => {
     form._syncFor(); form._syncDate(); form._syncSentence();
-    const c = form.xccy.value; rateBox.hidden = c === ccy; form.xrate.required = c !== ccy;
+    const c = form.xccy.value; form.xrate.required = c !== ccy;
     $("#fxfrom", rateBox).textContent = "1 " + c + " =";
     const a = c === ccy ? null : autoRate(c, ccy);
     if (a && !form.xrate.value) form.xrate.value = toInput(a);
