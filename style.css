@@ -409,3 +409,13 @@ html.booting #app button:not(.trip):not(.back),html.booting #app input,html.boot
 .money .fx-seg{flex:0 0 auto;min-height:0;margin:0;padding:0 10px;border:none;border-left:1px solid var(--line);border-radius:0;
   background:var(--accent-soft);color:var(--accent-text);font:600 14px/1 var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
 .money .fx-seg[aria-expanded="true"]{color:var(--accent-ink);background:var(--accent)}
+.cat-row{width:100%;background:none;border-left:none;border-right:none;border-bottom:none;border-radius:0;font:inherit;color:var(--ink);text-align:left;cursor:pointer;padding-inline:0}
+.cats .cat-row:first-child{border-top:none}
+.cat-amt{display:inline-flex;align-items:center;gap:10px}
+.cat-amt .chev{color:var(--muted)}
+.chev.up{transform:translateY(2px) rotate(-135deg)}
+.cat-items{display:flex;flex-direction:column;gap:2px;margin:0 0 10px;padding:4px 0 4px 12px;border-left:2px solid var(--line)}
+.cat-x{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:6px 0;font-size:14px}
+.cat-x .xi{font-size:16px}
+.cat-x-main{display:flex;flex-direction:column;min-width:0}
+.cat-x-desc{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

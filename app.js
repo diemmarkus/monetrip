@@ -3,11 +3,11 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signI
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, deleteField, FieldPath }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js?v=94";
-import { settle, balances } from "./settle.js?v=94";
-import { autoIcon, PICKS, categoryOf, CAT_ICON } from "./icons.js?v=94";
-import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=94";
-import { legalDoc } from "./legal.js?v=94";
+import { firebaseConfig } from "./firebase-config.js?v=95";
+import { settle, balances } from "./settle.js?v=95";
+import { autoIcon, PICKS, categoryOf, CAT_ICON } from "./icons.js?v=95";
+import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=95";
+import { legalDoc } from "./legal.js?v=95";
 
 const CURRENCIES = ["EUR","USD","GBP","CHF","CZK","HUF","PLN","TRY","SEK","NOK","DKK","JPY","CAD","AUD","THB"];
 const $ = (s, r = document) => r.querySelector(s);
@@ -1095,10 +1095,24 @@ function analyticsMore(t, spends, cats, total, people, base, label, pct) {
   // All categories, nothing folded.
   // Only real categories here; the pie's "Other" is a fold of these plus untagged expenses, so it would read differently.
   const bySum = cats.filter(c => c.key !== "other").sort((a, b) => b.sum - a.sum);
-  if (bySum.length) out.push(h("h3", { text: tr("ana.allCats") }), h("div", { class: "list cats" }, bySum.map(c => h("div", { class: "li" },
-    h("span", {}, h("span", { "aria-hidden": "true", text: CAT_ICON[c.key] + " " }), h("b", { text: label(c) }), h("span", { class: "muted", text: " · " + tr("ana.count", { n: c.n }) })),
-    h("span", { class: "num", text: money(c.sum, ccy) }),
-    h("div", { class: "bar" }, h("i", { style: `width:${c.sum / bySum[0].sum * 100}%;background:${c.color}` }))))));
+  // Tap a category to unfold its expenses (newest first); tap again to fold.
+  const catOpen = bySum.some(c => c.key === ui.anaCat) ? ui.anaCat : null;
+  const catItems = c => spends.filter(e => categoryOf(iconFor(t, e)) === c.key)
+    .sort((a, b) => dayKey(b).localeCompare(dayKey(a)) || (b.at || 0) - (a.at || 0))
+    .map(e => h("div", { class: "cat-x" },
+      h("span", { class: "xi", "aria-hidden": "true", text: iconFor(t, e) }),
+      h("span", { class: "cat-x-main" }, h("span", { class: "cat-x-desc", text: e.desc }),
+        h("span", { class: "muted small", text: `${dayLabel(dayKey(e))} · ${memberName(t, e.paidBy)}` })),
+      h("span", { class: "num", text: money(base(e), ccy) })));
+  if (bySum.length) out.push(h("h3", { text: tr("ana.allCats") }), h("div", { class: "list cats" }, bySum.flatMap(c => {
+    const open = c.key === catOpen;
+    return [h("button", { type: "button", class: "li cat-row" + (open ? " open" : ""), "aria-expanded": String(open),
+        onclick: () => { ui.anaCat = open ? null : c.key; render(); } },
+      h("span", {}, h("span", { "aria-hidden": "true", text: CAT_ICON[c.key] + " " }), h("b", { text: label(c) }), h("span", { class: "muted", text: " · " + tr("ana.count", { n: c.n }) })),
+      h("span", { class: "cat-amt" }, h("span", { class: "num", text: money(c.sum, ccy) }), h("span", { class: "chev" + (open ? " up" : ""), "aria-hidden": "true" })),
+      h("div", { class: "bar" }, h("i", { style: `width:${c.sum / bySum[0].sum * 100}%;background:${c.color}` }))),
+      open ? h("div", { class: "cat-items" }, catItems(c)) : null];
+  })));
 
   // Spending per day, stacked by who paid; tap a day for its amount and who paid what.
   if (days.length > 1) {
