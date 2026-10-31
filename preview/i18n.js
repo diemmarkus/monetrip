@@ -98,7 +98,7 @@ const DICT = {
     "x.saveChanges": "Save changes", "x.add": "Add expense", "x.addShort": "Add", "x.saveShort": "Save",
     "x.nobody": "Nobody yet",
     "x.sentence": "{who} paid {when} for {for}", "x.sentenceYou": "{who} paid {when} for {for}",
-    "x.youSubj": "You", "x.youObj": "you", "x.forAll": "everyone", "x.forNobody": "nobody yet",
+    "x.youSubj": "You", "x.youObj": "you", "x.forAll": "everyone", "x.forAllChip": "Everyone", "x.forNobody": "nobody yet",
     "x.whenToday": "today", "x.whenYesterday": "yesterday", "x.whenOn": "on {d}", "x.everyone": "Everyone ({n})", "x.justYou": "Just you",
 
     "filter.search": "Search expenses", "filter.person": "Person", "filter.everyone": "Everyone", "filter.kind": "Type",
@@ -225,7 +225,7 @@ const DICT = {
     "x.saveChanges": "Speichern", "x.add": "Eintragen", "x.addShort": "Eintragen", "x.saveShort": "Speichern",
     "x.nobody": "Noch niemand",
     "x.sentence": "{who} hat {when} für {for} bezahlt", "x.sentenceYou": "{who} hast {when} für {for} bezahlt",
-    "x.youSubj": "Du", "x.youObj": "dich", "x.forAll": "alle", "x.forNobody": "noch niemanden",
+    "x.youSubj": "Du", "x.youObj": "dich", "x.forAll": "alle", "x.forAllChip": "Alle", "x.forNobody": "noch niemanden",
     "x.whenToday": "heute", "x.whenYesterday": "gestern", "x.whenOn": "am {d}", "x.everyone": "Alle ({n})", "x.justYou": "Nur du",
 
     "filter.search": "Ausgaben durchsuchen", "filter.person": "Person", "filter.everyone": "Alle Personen", "filter.kind": "Art",

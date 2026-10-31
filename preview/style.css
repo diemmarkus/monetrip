@@ -351,3 +351,16 @@ html.booting #app button:not(.trip):not(.back),html.booting #app input,html.boot
 .sentence .forbtn #forsum{max-width:14ch}
 .sentence .chev{width:7px;height:7px}
 .xform.sheet .sentence + #forlist{padding-top:0}
+
+/* Who shares it: toggle chips */
+.xform.sheet .people{gap:8px;padding-top:2px}
+.xform.sheet .people .pchip,.people .allchip{position:relative;display:inline-flex;flex-direction:row;align-items:center;gap:6px;min-height:36px;padding:5px 14px;
+  border:1.5px solid var(--line);border-radius:99px;background:var(--surface);color:var(--ink);font:600 15px/1.2 var(--body);cursor:pointer;user-select:none}
+.people .pchip input{position:absolute;opacity:0;width:1px;height:1px;margin:0;pointer-events:none}
+.people .tick{display:none;width:10px;height:6px;border-left:2px solid currentColor;border-bottom:2px solid currentColor;transform:translateY(-2px) rotate(-45deg)}
+.xform.sheet .people .pchip:has(input:checked){background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.people .pchip:has(input:checked) .tick{display:block}
+.people .pchip:has(input:focus-visible){outline:2px solid var(--accent-text);outline-offset:2px}
+.people .allchip{color:var(--accent-text);border-style:dashed}
+.people .allchip[aria-pressed="true"]{border-style:solid;border-color:var(--accent-text)}
+@media (prefers-reduced-motion:no-preference){.people .pchip{transition:background .12s,border-color .12s}}
