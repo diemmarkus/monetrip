@@ -27,7 +27,7 @@ const RULES = [
   ["🍔", "burger food essen dinner abendessen lunch mittagessen restaurant meal snack imbiss takeaway mcdonald"],
   ["🛒", "groceries grocery supermarket supermarkt einkauf einkaufen lidl aldi billa spar rewe edeka"],
   ["🏰", "castle schloss burg festung fortress palace palast palais"],
-  ["🎟️", "museum entry eintritt tour tickets concert konzert show cinema kino theater theatre cathedral kathedrale church kirche abbey abtei gallery galerie zoo aquarium sightseeing excursion ausflug führung guide monument denkmal tower turm exhibition ausstellung attraction"],
+  ["🎟️", "museum entry eintritt tour tickets concert konzert show cinema kino theater theatre cathedral kathedrale church kirche abbey abtei gallery galerie zoo aquarium sightseeing excursion ausflug führung guide monument denkmal tower turm exhibition ausstellung attraction distillery destillerie"],
   ["⛷️", "ski skipass lift"],
   ["🏊", "pool spa therme sauna beach strand"],
   ["🎉", "party club disco"],
@@ -53,8 +53,14 @@ export function autoIcon(desc) {
       if (i > 0 && (!best || i < best.i || (i === best.i && w.length > best.len))) best = { icon, i, len: w.length };
     }
   }
+  // Food or drink plus a tour/tickets/tasting is something you do: "Whisky tour", "Wine tasting", "Food tour".
+  if (best && FOOD_DRINK.has(best.icon) && ACTIVITY_HINTS.some(w => hasWord(d, w))) return "🎟️";
   return best ? best.icon : DEFAULT_ICON;
 }
+const FOOD_DRINK = new Set(["☕", "🍺", "🍷", "🍹", "🥃", "🍦", "🥙", "🍕", "🍣", "🍔"]);
+const ACTIVITY_HINTS = "tour tours führung tickets ticket eintritt entry tasting verkostung class kurs workshop".split(" ");
+// The word appears at the start of a word in the (padded, lower-cased) description.
+function hasWord(d, w) { let i = d.indexOf(w); while (i > 0 && /[a-zäöüß]/.test(d[i - 1])) i = d.indexOf(w, i + 1); return i > 0; }
 
 export const iconFor = e => e.icon || autoIcon(e.desc);
 
