@@ -19,7 +19,7 @@ const RULES = [
   ["🍺", "beer bier pint drink getränke bar pub kneipe"],
   ["🍹", "cocktail cocktails mojito margarita negroni martini daiquiri caipirinha longdrink"],
   ["🥃", "whisky whiskey scotch bourbon gin rum vodka wodka tequila schnaps schnapps shot shots"],
-  ["🍷", "wine wein aperol spritz prosecco"],
+  ["🍷", "wine wein rotwein weißwein weisswein vino sekt champagne champagner heuriger aperol spritz prosecco"],
   ["🍦", "ice cream eis gelato dessert"],
   ["🥙", "döner doner kebab kebap falafel"],
   ["🍕", "pizza pizzeria pasta spaghetti"],
