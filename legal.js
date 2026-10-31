@@ -42,8 +42,8 @@ function imprint(l) {
   return l === "de" ? {
     title: "Impressum",
     sections: [
-      { h: "Betreiber", p: [basis, ...addr, "E-Mail: " + o.email] },
-      { h: "Zweck", p: ["MoneTrip ist ein privates, nicht kommerzielles Projekt zum Aufteilen von Reisekosten unter Freunden. Es gibt keine Werbung und keine kostenpflichtigen Funktionen."] },
+      { h: "Betreiber", p: [basis, [...addr, "E-Mail: " + o.email].join("\n")] },
+      { h: "Zweck", p: ["MoneTrip ist ein persönliches Projekt von mir: eine kleine App, um Reisekosten unter Freunden aufzuteilen. Ich verfolge damit keine kommerziellen Interessen, es gibt keine Werbung und keine kostenpflichtigen Funktionen.", "Ich hoffe, du hast Freude mit MoneTrip!"] },
       ...(o.country === "AT" ? [{ h: "Grundlegende Richtung", p: ["Werkzeug zum gemeinsamen Erfassen und Abrechnen von Reiseausgaben. Keine redaktionellen Inhalte."] }] : []),
       ...(o.country === "DE" ? [{ h: "Verantwortlich für den Inhalt", p: [o.name + ", Anschrift wie oben"] }] : []),
       { h: "Haftung", p: ["Wechselkurse stammen von der Europäischen Zentralbank (über Frankfurter) und dienen nur zur Orientierung. Alle Beträge ohne Gewähr. Für Inhalte verlinkter Seiten sind deren Betreiber verantwortlich."] },
@@ -51,8 +51,8 @@ function imprint(l) {
   } : {
     title: "Imprint",
     sections: [
-      { h: "Operator", p: [basis, ...addr, "Email: " + o.email] },
-      { h: "Purpose", p: ["MoneTrip is a private, non-commercial project for splitting trip costs among friends. There are no ads and no paid features."] },
+      { h: "Operator", p: [basis, [...addr, "Email: " + o.email].join("\n")] },
+      { h: "Purpose", p: ["MoneTrip is a personal project of mine: a small app for splitting trip costs among friends. I have no commercial interest in it, and there are no ads and no paid features.", "I hope you enjoy MoneTrip!"] },
       ...(o.country === "AT" ? [{ h: "Editorial line", p: ["A tool for logging and settling shared trip expenses. No editorial content."] }] : []),
       ...(o.country === "DE" ? [{ h: "Responsible for content", p: [o.name + ", address as above"] }] : []),
       { h: "Liability", p: ["Exchange rates come from the European Central Bank (via Frankfurter) and are for guidance only. All amounts without guarantee. Operators of linked sites are responsible for their content."] },

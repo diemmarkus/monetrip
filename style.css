@@ -233,7 +233,7 @@ button.ghost.lang{font-family:var(--mono);font-size:12px;letter-spacing:.06em;pa
 .legal-links a{color:var(--muted);text-decoration:underline;text-underline-offset:2px}
 .legal h1{font-size:26px}
 .legal h2{font-size:17px;margin:18px 0 6px}
-.legal p{margin:0 0 8px;line-height:1.55;overflow-wrap:anywhere}
+.legal p{margin:0 0 8px;line-height:1.55;overflow-wrap:anywhere;white-space:pre-line}
 .acct{position:relative;flex:none}
 .avatar-btn{padding:0;border:none;background:none;border-radius:50%;min-height:0;width:40px;height:40px;display:grid;place-items:center;cursor:pointer}
 .avatar-btn[aria-expanded="true"] .avatar{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--accent-text)}
