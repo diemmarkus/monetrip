@@ -3,11 +3,11 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signI
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, deleteField, FieldPath }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js?v=107";
-import { settle, balances } from "./settle.js?v=107";
-import { autoIcon, PICKS, categoryFor, CAT_ICON } from "./icons.js?v=107";
-import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=107";
-import { legalDoc } from "./legal.js?v=107";
+import { firebaseConfig } from "./firebase-config.js?v=108";
+import { settle, balances } from "./settle.js?v=108";
+import { autoIcon, PICKS, categoryFor, CAT_ICON } from "./icons.js?v=108";
+import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=108";
+import { legalDoc } from "./legal.js?v=108";
 
 const CURRENCIES = ["EUR","USD","GBP","CHF","CZK","HUF","PLN","TRY","SEK","NOK","DKK","JPY","CAD","AUD","THB"];
 const $ = (s, r = document) => r.querySelector(s);
@@ -568,11 +568,11 @@ function homeView() {
       try { await createTrip(name, f.thome.value, f.tlocal.value, nick); } catch { err.hidden = false; err.textContent = tr("home.createFailed"); btn.disabled = false; }
     } },
     h("h2", { text: tr("home.newTrip") }),
-    // No visible labels: placeholders and the hints under the currencies say what goes where.
+    // Only the currencies keep labels (two look-alike boxes); name fields go by their placeholders.
     h("input", { id: "tname", name: "tname", placeholder: tr("home.tripNamePh"), "aria-label": tr("home.tripName"), required: true, maxlength: 60 }),
     h("div", { class: "pair" },
-      h("div", { class: "field" }, ccySelect("thome", home, tr("home.homeCcy")), h("span", { class: "hint", text: tr("home.homeCcyHint") })),
-      h("div", { class: "field" }, ccySelect("tlocal", home, tr("home.tripCcy")), h("span", { class: "hint", text: tr("home.tripCcyHint") }))),
+      h("label", {}, tr("home.homeCcy"), ccySelect("thome", home)),
+      h("label", {}, tr("home.tripCcy"), ccySelect("tlocal", home))),
     h("input", { id: "tnick", name: "tnick", value: firstName(), placeholder: tr("home.yourNamePh"), "aria-label": tr("home.yourName"), required: true, maxlength: 30 }),
     err,
     h("button", { class: "primary", type: "submit" }, tr("home.create")));
