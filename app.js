@@ -3,11 +3,11 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signI
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, deleteField, FieldPath }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js?v=92";
-import { settle, balances } from "./settle.js?v=92";
-import { autoIcon, PICKS, categoryOf, CAT_ICON } from "./icons.js?v=92";
-import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=92";
-import { legalDoc } from "./legal.js?v=92";
+import { firebaseConfig } from "./firebase-config.js?v=93";
+import { settle, balances } from "./settle.js?v=93";
+import { autoIcon, PICKS, categoryOf, CAT_ICON } from "./icons.js?v=93";
+import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=93";
+import { legalDoc } from "./legal.js?v=93";
 
 const CURRENCIES = ["EUR","USD","GBP","CHF","CZK","HUF","PLN","TRY","SEK","NOK","DKK","JPY","CAD","AUD","THB"];
 const $ = (s, r = document) => r.querySelector(s);
@@ -1020,8 +1020,8 @@ function tripView() {
 }
 
 /* ---------- analytics ---------- */
-// Categorical colours, fixed order (validated set from the dataviz palette); "other" is always neutral.
-const CAT_COLORS = 8;
+// Categorical colours in fixed order (teal, orange, coral, olive, violet, mustard, sky; colourblind-checked); "other" is always neutral.
+const CAT_COLORS = 7;
 const FOLD_SHARE = 0.04, FOLD_MAX = 6; // folded view: slices under 4 % (and beyond the 6th) go to "Other"
 function analyticsView(t, spends, people) {
   const ccy = t.currency, base = e => Math.round(e.amount * (e.rate || 1) * 100);

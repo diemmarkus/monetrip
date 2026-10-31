@@ -12,20 +12,20 @@
   --display:"Plus Jakarta Sans",ui-sans-serif,system-ui,sans-serif;
   --body:"Figtree",ui-sans-serif,system-ui,sans-serif;
   --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
-  --cat-1:#2a78d6; --cat-2:#eb6834; --cat-3:#1baf7a; --cat-4:#eda100; --cat-5:#e87ba4; --cat-6:#008300; --cat-7:#6250d6; --cat-8:#e34948; --cat-other:#a3aeaa;
+  --cat-1:#13a6ad; --cat-2:#ed9726; --cat-3:#e2607a; --cat-4:#5f9a1f; --cat-5:#8a5cd1; --cat-6:#c4a21a; --cat-7:#0b84c0; --cat-other:#a3aeaa;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#0f1715; --surface:#17221f; --ink:#e6eeeb; --muted:#93a39e; --line:#2a3834;
   --accent:#34e5eb; --accent-ink:#03363a; --accent-soft:#0f3a3d; --accent-text:#34e5eb;
   --bar-pos:#34e5eb; --bar-neg:#ed9726; --danger:#f08a7e;
   --owe:#ed9726; --get:#34e5eb; --warn:#e7bb57; --warn-soft:#352c14; color-scheme:dark;
-  --cat-1:#3987e5; --cat-2:#d95926; --cat-3:#199e70; --cat-4:#c98500; --cat-5:#d55181; --cat-6:#008300; --cat-7:#9085e9; --cat-8:#e66767; --cat-other:#5b6b66;}}
+  --cat-1:#16a2a8; --cat-2:#cc7b12; --cat-3:#e2588a; --cat-4:#6b9e1a; --cat-5:#9479e0; --cat-6:#a88c14; --cat-7:#1789c4; --cat-other:#5b6b66;}}
 :root[data-theme="dark"]{
   --bg:#0f1715; --surface:#17221f; --ink:#e6eeeb; --muted:#93a39e; --line:#2a3834;
   --accent:#34e5eb; --accent-ink:#03363a; --accent-soft:#0f3a3d; --accent-text:#34e5eb;
   --bar-pos:#34e5eb; --bar-neg:#ed9726; --danger:#f08a7e;
   --owe:#ed9726; --get:#34e5eb; --warn:#e7bb57; --warn-soft:#352c14; color-scheme:dark;
-  --cat-1:#3987e5; --cat-2:#d95926; --cat-3:#199e70; --cat-4:#c98500; --cat-5:#d55181; --cat-6:#008300; --cat-7:#9085e9; --cat-8:#e66767; --cat-other:#5b6b66;}
+  --cat-1:#16a2a8; --cat-2:#cc7b12; --cat-3:#e2588a; --cat-4:#6b9e1a; --cat-5:#9479e0; --cat-6:#a88c14; --cat-7:#1789c4; --cat-other:#5b6b66;}
 body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--body)}
 .wrap{max-width:720px;margin:0 auto;padding-block:24px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:20px}
 h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;line-height:1.15}
