@@ -3,11 +3,11 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signI
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, deleteField, FieldPath }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js?v=108";
-import { settle, balances } from "./settle.js?v=108";
-import { autoIcon, PICKS, categoryFor, CAT_ICON } from "./icons.js?v=108";
-import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=108";
-import { legalDoc } from "./legal.js?v=108";
+import { firebaseConfig } from "./firebase-config.js?v=110";
+import { settle, balances } from "./settle.js?v=110";
+import { autoIcon, PICKS, categoryFor, CAT_ICON } from "./icons.js?v=110";
+import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=110";
+import { legalDoc } from "./legal.js?v=110";
 
 const CURRENCIES = ["EUR","USD","GBP","CHF","CZK","HUF","PLN","TRY","SEK","NOK","DKK","JPY","CAD","AUD","THB"];
 const $ = (s, r = document) => r.querySelector(s);
@@ -127,7 +127,7 @@ function openTrip(id, keepShown = false) {
   }, () => {}));
   render();
 }
-function closeTrip() { ui.sheetOpen = false; ui.editing = null; document.documentElement.classList.remove("sheet-open"); cur.unsubs.forEach(u => u()); cur = { id: null, trip: null, expenses: [], unsubs: [], expLoaded: false }; ui.joinPick = false; }
+function closeTrip() { ui.sheetOpen = false; ui.editing = null; ui.showAllX = null; document.documentElement.classList.remove("sheet-open"); cur.unsubs.forEach(u => u()); cur = { id: null, trip: null, expenses: [], unsubs: [], expLoaded: false }; ui.joinPick = false; }
 function goHome() { closeTrip(); history.replaceState(null, "", location.pathname); render(); }
 
 async function createTrip(name, ccy, local, nick) {
@@ -927,6 +927,10 @@ function tripView() {
       h("span", { text: tr("filter.count", { n: list.length, total: cur.expenses.length }) + " · " + ((fp && !fk) || fk === "for" ? (fp ? tr("filter.shareOf", { name: memberName(t, fp) }) : tr("filter.yourShare")) : "") }),
       h("b", { class: "num", text: money(Math.round(listTotal), ccy) }),
       h("button", { type: "button", class: "ghost", onclick: () => { ui.fq = ""; ui.fp = ""; ui.fk = ""; render(); } }, tr("filter.clear"))) : null) : null;
+  // Only the newest expenses at first; "Show all" (per trip, this visit) lists the rest.
+  // Day totals still count the whole day, even when part of it is cut off.
+  const LIST_LIMIT = 30, showAll = ui.showAllX === cur.id;
+  const shownList = showAll ? list : list.slice(0, LIST_LIMIT), hiddenCount = list.length - shownList.length;
   const filterBtn = h("button", { type: "button", class: "add-round filter-btn" + (filtering ? " active" : ""), title: tr("filter.toggle"), "aria-label": tr("filter.toggle"),
     "aria-expanded": String(filterOpen), onclick: () => { ui.filterOpen = !filterOpen; render(); if (ui.filterOpen) document.getElementById("xfq")?.focus(); } });
   filterBtn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8.5V19l-4 2v-7.5Z"/></svg>';
@@ -937,7 +941,7 @@ function tripView() {
     filterBar,
     !cur.expenses.length ? h("div", { class: "empty", text: tr("list.empty") })
     : !list.length ? h("div", { class: "empty", text: tr("filter.none") })
-    : h("div", { class: "list" }, list.flatMap((e, i) => {
+    : h("div", { class: "list" }, shownList.flatMap((e, i) => {
       const base = Math.round(e.amount * (e.rate || 1) * 100), isPay = e.kind === "payment", own = e.by === mine && !isPay;
       const fg = h("div", { class: "li xp" + (isPay ? " payment" : "") + (ui.editing === e.id ? " is-editing" : ""), tabindex: 0,
           "aria-label": `${e.desc}, ${fmt(e.amount, e.currency)}. ${own ? tr("list.ariaEdit") : ""}${tr("list.ariaDel")}`,
@@ -955,10 +959,12 @@ function tripView() {
         fg);
       attachSwipe(row, fg, { left: () => deleteExpense(t, e), right: own ? () => startEdit(e) : null });
       const key = dayKey(e);
-      if (i > 0 && dayKey(list[i - 1]) === key) return [row];
+      if (i > 0 && dayKey(shownList[i - 1]) === key) return [row];
       const dayTotal = list.filter(x => dayKey(x) === key).reduce((sum, x) => sum + amountOf(x), 0);
       return [h("div", { class: "day" }, h("span", { text: dayLabel(key) }), h("span", { class: "num", text: money(Math.round(dayTotal), ccy) })), row];
-    }))));
+    })),
+    hiddenCount ? h("button", { type: "button", class: "ghost unfold", onclick: () => { ui.showAllX = cur.id; render(); } },
+      tr("list.showAll", { n: list.length }), h("span", { class: "chev", "aria-hidden": "true" })) : null));
 
   /* analytics */
   if (spends.length) out.push(analyticsView(t, spends, ids.length));
