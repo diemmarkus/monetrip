@@ -3,11 +3,11 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signI
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, deleteField, FieldPath }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js?v=111";
-import { settle, balances } from "./settle.js?v=111";
-import { autoIcon, PICKS, categoryFor, CAT_ICON } from "./icons.js?v=111";
-import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=111";
-import { legalDoc } from "./legal.js?v=111";
+import { firebaseConfig } from "./firebase-config.js?v=114";
+import { settle, balances } from "./settle.js?v=114";
+import { autoIcon, PICKS, categoryFor, CAT_ICON } from "./icons.js?v=114";
+import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=114";
+import { legalDoc } from "./legal.js?v=114";
 
 const CURRENCIES = ["EUR","USD","GBP","CHF","CZK","HUF","PLN","TRY","SEK","NOK","DKK","JPY","CAD","AUD","THB"];
 const $ = (s, r = document) => r.querySelector(s);
@@ -417,7 +417,10 @@ function brand() {
       menu);
   }
   return h("div", { class: "brand" }, h("div", { class: "top" },
-    h("div", { class: "id" }, h("span", { class: "logo", "aria-hidden": "true" }),
+    // Logo and name lead to the start page (trip list), from anywhere.
+    h("a", { class: "id", href: "./", "aria-label": tr("brand.home"), onclick: ev => {
+        ev.preventDefault(); ui.legal = null; ui.renaming = null; goHome(); scrollTo(0, 0);
+      } }, h("span", { class: "logo", "aria-hidden": "true" }),
       h("div", { class: "words" }, h("span", { class: "name", text: "MoneTrip" }),
         h("span", { class: "tag", text: tr("brand.tag") }))),
     right));
@@ -448,6 +451,8 @@ addEventListener("hashchange", () => {
    in localStorage and drawn immediately; taps wait until the sign-in check is done. */
 const SNAP_KEY = "mt-snap";
 let booting = false, snapTimer = 0;
+// Resolves once Firebase has confirmed who is signed in (start-up can show the saved screen before that).
+let authReadyDone; const authReady = new Promise(r => { authReadyDone = r; });
 // Last seen expenses of the most recently opened trips, so reopening one is instant even offline.
 let expCache = {}, expCacheUid = null;
 const EXP_CACHE_TRIPS = 8;
@@ -783,6 +788,11 @@ function tripView() {
       const bad = !f.xdesc.value.trim() ? tr("x.needDesc") : !(amount > 0) ? tr("x.needAmount") : !(rate > 0) ? tr("x.needRate", { ccy, c }) : !split.length ? tr("x.needSplit") : null;
       if (bad) { xerr.hidden = false; xerr.textContent = bad; return; }
       const btn = f.querySelector("button[type=submit]"); btn.disabled = true;
+      // Started from the saved screen and the sign-in check is still running: wait for it before saving.
+      if (booting) {
+        const label = btn.textContent; btn.textContent = tr("x.signingIn"); await authReady; btn.textContent = label;
+        if (cur.id !== t.id || !me) { btn.disabled = false; return; } // a different account signed in: the trip is gone
+      }
       const data = { desc: f.xdesc.value.trim(), icon: f.xicon.value, amount, currency: c, rate, paidBy: f.xpaid.value, split, date: f.xdate.value || isoDay(Date.now()) };
       if (data.icon !== (editing?.icon || "")) rememberIcon(t, data.desc, data.icon);
       try {
@@ -1181,7 +1191,7 @@ onAuthStateChanged(auth, async user => {
   if (booting) { booting = false; document.documentElement.classList.remove("booting"); if (!keep) closeTrip(); }
   if (expCacheUid && expCacheUid !== user?.uid) expCache = {};
   expCacheUid = user?.uid || null;
-  me = user; unsubTrips?.();
+  me = user; unsubTrips?.(); authReadyDone();
   // Accounts saved with Google before that copied Google's name and photo: repair once.
   const g = user && !user.isAnonymous && (user.providerData || []).find(p => p?.providerId === "google.com");
   if (g && g.photoURL && !user.photoURL) updateProfile(user, { photoURL: g.photoURL, displayName: g.displayName || user.displayName }).then(() => render()).catch(() => {});

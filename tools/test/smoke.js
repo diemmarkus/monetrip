@@ -45,6 +45,14 @@ fs.mkdirSync(OUT, { recursive: true });
     await p.reload(); await p.waitForTimeout(300);
     await p.click(".trip >> text=Edinburgh"); await p.waitForTimeout(200);
     ok("slow net: seen trip opens during sign-in", (await p.$(".ticket")) !== null && (await p.$$(".swipe")).length === 2);
+    // The + works while signing in: the sheet opens at once, saving waits for the sign-in.
+    await p.click("#fab"); await p.waitForTimeout(300);
+    ok("slow net: + opens the sheet during sign-in", !(await p.$eval("#sheet", e => e.hidden)) && await p.evaluate(() => document.documentElement.classList.contains("booting")));
+    await p.fill("#xdesc", "Early coffee"); await p.fill("#xamt", "3");
+    await p.click(".xform button[type=submit]"); await p.waitForTimeout(200);
+    const waitLabel = await p.textContent(".xform button[type=submit]");
+    await p.waitForTimeout(4200); // sign-in (2.5 s) + the slow expense list (1.5 s)
+    ok("slow net: save waits for sign-in, then lands", /Signing in/.test(waitLabel) && (await p.$("text=Early coffee")) !== null && await p.$eval("#sheet", e => e.hidden));
     await p.click(".back"); await p.waitForTimeout(200);
     await p.click(".trip >> text=Vienna"); await p.waitForTimeout(200);
     ok("slow net: unseen trip shows loading screen", (await p.textContent(".trip-loading h1").catch(() => "")) === "Vienna");
