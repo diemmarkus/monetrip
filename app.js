@@ -3,11 +3,11 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signI
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, deleteField, FieldPath }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js?v=110";
-import { settle, balances } from "./settle.js?v=110";
-import { autoIcon, PICKS, categoryFor, CAT_ICON } from "./icons.js?v=110";
-import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=110";
-import { legalDoc } from "./legal.js?v=110";
+import { firebaseConfig } from "./firebase-config.js?v=111";
+import { settle, balances } from "./settle.js?v=111";
+import { autoIcon, PICKS, categoryFor, CAT_ICON } from "./icons.js?v=111";
+import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=111";
+import { legalDoc } from "./legal.js?v=111";
 
 const CURRENCIES = ["EUR","USD","GBP","CHF","CZK","HUF","PLN","TRY","SEK","NOK","DKK","JPY","CAD","AUD","THB"];
 const $ = (s, r = document) => r.querySelector(s);
@@ -929,7 +929,7 @@ function tripView() {
       h("button", { type: "button", class: "ghost", onclick: () => { ui.fq = ""; ui.fp = ""; ui.fk = ""; render(); } }, tr("filter.clear"))) : null) : null;
   // Only the newest expenses at first; "Show all" (per trip, this visit) lists the rest.
   // Day totals still count the whole day, even when part of it is cut off.
-  const LIST_LIMIT = 30, showAll = ui.showAllX === cur.id;
+  const LIST_LIMIT = 20, showAll = ui.showAllX === cur.id;
   const shownList = showAll ? list : list.slice(0, LIST_LIMIT), hiddenCount = list.length - shownList.length;
   const filterBtn = h("button", { type: "button", class: "add-round filter-btn" + (filtering ? " active" : ""), title: tr("filter.toggle"), "aria-label": tr("filter.toggle"),
     "aria-expanded": String(filterOpen), onclick: () => { ui.filterOpen = !filterOpen; render(); if (ui.filterOpen) document.getElementById("xfq")?.focus(); } });
