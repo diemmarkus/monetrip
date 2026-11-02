@@ -54,8 +54,9 @@ fs.mkdirSync(OUT, { recursive: true });
     await p.waitForTimeout(4200); // sign-in (2.5 s) + the slow expense list (1.5 s)
     ok("slow net: save waits for sign-in, then lands", /Signing in/.test(waitLabel) && (await p.$("text=Early coffee")) !== null && await p.$eval("#sheet", e => e.hidden));
     await p.click(".back"); await p.waitForTimeout(200);
-    await p.click(".trip >> text=Vienna"); await p.waitForTimeout(200);
-    ok("slow net: unseen trip shows loading screen", (await p.textContent(".trip-loading h1").catch(() => "")) === "Vienna");
+    await p.click(".trip >> text=Vienna"); await p.waitForTimeout(500); // the bar appears after 300 ms
+    ok("slow net: unseen trip shows its header and the busy bar, no zeros",
+      (await p.textContent(".ticket h1").catch(() => "")) === "Vienna" && !(await p.$("#xpanel")) && !(await p.$eval("#busybar", e => e.hidden)));
     await p.screenshot({ path: path.join(OUT, "trip-loading.png") });
     await p.waitForTimeout(4500);
     ok("slow net: unseen trip loads", (await p.$(".ticket")) !== null && (await p.$$(".swipe")).length === 1);

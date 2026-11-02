@@ -1,17 +1,45 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut, signInAnonymously, updateProfile, linkWithPopup }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, query, where, onSnapshot, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, deleteField, FieldPath }
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, query, where, onSnapshot, getDoc, setDoc as fsSet, updateDoc as fsUpdate, deleteDoc as fsDelete, arrayUnion, deleteField, FieldPath }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js?v=116";
-import { settle, balances } from "./settle.js?v=116";
-import { autoIcon, PICKS, categoryFor, CAT_ICON } from "./icons.js?v=116";
-import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=116";
-import { legalDoc } from "./legal.js?v=116";
+import { firebaseConfig } from "./firebase-config.js?v=118";
+import { settle, balances } from "./settle.js?v=118";
+import { autoIcon, PICKS, categoryFor, CAT_ICON } from "./icons.js?v=118";
+import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=118";
+import { legalDoc } from "./legal.js?v=118";
 
 const CURRENCIES = ["EUR","USD","GBP","CHF","CZK","HUF","PLN","TRY","SEK","NOK","DKK","JPY","CAD","AUD","THB"];
 const $ = (s, r = document) => r.querySelector(s);
 const app = $("#app");
+
+/* ---------- busy bar ----------
+   A thin bar along the top edge while the app waits on the network: confirming the sign-in,
+   data still coming from the phone's cache, or a save not yet confirmed by the server.
+   Only after a short moment (no flicker for quick answers), and never longer than 20 s in one
+   go (offline, Firestore would keep "waiting" forever; the app still works from the cache). */
+const busy = new Map(); // key → count
+const busyBar = document.body.appendChild(Object.assign(document.createElement("div"), { id: "busybar", hidden: true }));
+busyBar.setAttribute("role", "progressbar"); busyBar.setAttribute("aria-label", "Loading");
+let busyShowT = 0, busyCapT = 0;
+function setBusy(key, on) {
+  const n = Math.max(0, (busy.get(key) || 0) + (on === true ? 1 : on === false ? -1 : 0));
+  if (typeof on === "string") { if (on === "on") busy.set(key, 1); else busy.delete(key); } // level-style keys
+  else if (n) busy.set(key, n); else busy.delete(key);
+  if (busy.size) {
+    if (busyBar.hidden && !busyShowT && !busyCapT) busyShowT = setTimeout(() => {
+      busyShowT = 0; busyBar.hidden = false;
+      busyCapT = setTimeout(() => { busyBar.hidden = true; }, 20000);
+    }, 300);
+  } else {
+    clearTimeout(busyShowT); clearTimeout(busyCapT); busyShowT = busyCapT = 0; busyBar.hidden = true;
+  }
+}
+const track = (key, p) => { setBusy(key, true); return p.finally(() => setBusy(key, false)); };
+// Every write shows the bar until the server has it.
+const setDoc = (...a) => track("save", fsSet(...a));
+const updateDoc = (...a) => track("save", fsUpdate(...a));
+const deleteDoc = (...a) => track("save", fsDelete(...a));
 
 const fbApp = initializeApp(firebaseConfig);
 const auth = getAuth(fbApp);
@@ -98,8 +126,9 @@ function watchTrips() {
     trips = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
     // An empty answer from the device cache may just mean "not synced yet", so wait for the server before saying "no trips".
     if (trips.length || !s.metadata?.fromCache) tripsLoaded = true;
+    setBusy("trips", s.metadata?.fromCache ? "on" : "off");
     if (!cur.id) render();
-  }, () => toast(tr("err.loadTrips")));
+  }, () => { setBusy("trips", "off"); toast(tr("err.loadTrips")); });
 }
 function openTrip(id, keepShown = false) {
   // keepShown: the trip is already on screen from the start-up snapshot; just attach live updates.
@@ -114,20 +143,22 @@ function openTrip(id, keepShown = false) {
   cur.id = id; if (location.hash !== "#trip-" + id) location.hash = "trip-" + id;
   // Still confirming the sign-in (slow network): show the trip now, attach live data once signed in.
   if (booting) { render(); return; }
+  setBusy("exp", "on"); // until the server has answered for the expenses
   cur.unsubs.push(onSnapshot(doc(db, "trips", id), s => {
     if (!s.exists() && s.metadata?.fromCache) return; // not on this phone yet: wait for the server
     cur.trip = s.exists() ? { id: s.id, ...s.data() } : null; if (!cur.trip) cur.missing = true; render();
   }, () => { cur.missing = true; render(); }));
   cur.unsubs.push(onSnapshot(collection(db, "trips", id, "expenses"), { includeMetadataChanges: true }, s => {
     // An empty answer from the phone's cache may just mean "never synced here": keep loading until the server answers.
+    setBusy("exp", s.metadata?.fromCache ? "on" : "off");
     if (s.empty && s.metadata?.fromCache && !cur.expLoaded) return;
     cur.expenses = s.docs.map(d => ({ id: d.id, ...d.data() }))
       .sort((a, b) => dayKey(b).localeCompare(dayKey(a)) || (b.at || 0) - (a.at || 0));
     cur.expLoaded = true; rememberExpenses(id, cur.expenses); render();
-  }, () => {}));
+  }, () => setBusy("exp", "off")));
   render();
 }
-function closeTrip() { ui.sheetOpen = false; ui.editing = null; ui.showAllX = null; document.documentElement.classList.remove("sheet-open"); cur.unsubs.forEach(u => u()); cur = { id: null, trip: null, expenses: [], unsubs: [], expLoaded: false }; ui.joinPick = false; }
+function closeTrip() { setBusy("exp", "off"); ui.sheetOpen = false; ui.editing = null; ui.showAllX = null; document.documentElement.classList.remove("sheet-open"); cur.unsubs.forEach(u => u()); cur = { id: null, trip: null, expenses: [], unsubs: [], expLoaded: false }; ui.joinPick = false; }
 function goHome() { closeTrip(); history.replaceState(null, "", location.pathname); render(); }
 
 async function createTrip(name, ccy, local, nick) {
@@ -480,7 +511,7 @@ function bootFromSnapshot() {
   const tm = location.hash.match(/^#trip-([a-z0-9]+)$/);
   if (location.hash && !tm) return;          // invite links, imprint: wait for the real sign-in
   if (tm && tm[1] !== snap.tripId && !expCache[tm[1]]) return;   // a trip we have no copy of
-  booting = true;
+  booting = true; setBusy("auth", "on");
   me = { uid: snap.uid, displayName: snap.name, photoURL: snap.photo, email: snap.email, isAnonymous: snap.anon };
   trips = snap.trips || []; tripsLoaded = true;
   if (tm) {
@@ -624,12 +655,11 @@ function refreshExpenses() {
 function tripView() {
   const t = cur.trip, back = h("button", { class: "back", onclick: goHome }, tr("trip.allTrips"));
   if (cur.missing) return [brand(), back, h("div", { class: "panel" }, h("p", { class: "muted", text: tr("trip.missing") }))];
-  if (!t || !cur.expLoaded) return [brand(), back, h("div", { class: "trip-loading", role: "status" },
-    t ? h("h1", { text: t.name }) : null,
-    h("div", { class: "sp-dots", "aria-hidden": "true" }, h("i"), h("i"), h("i")),
-    h("p", { class: "muted", text: tr("trip.loading") }),
-    // Appears by itself after a few seconds (CSS delay, counted from when the trip was opened).
-    h("p", { class: "muted slow", style: `animation-delay:${Math.max(0, 6000 - (Date.now() - (cur.openedAt || Date.now())))}ms`, text: tr("trip.slow") }))];
+  // No loading screen: the busy bar at the top shows that data is on its way. Until the trip itself
+  // is known only the header shows; until its expenses arrive, everything built from them waits
+  // (panels marked "needs-exp", analytics and the ticket's totals), so nothing shows wrong zeros.
+  if (!t) return [brand(), back];
+  const waiting = !cur.expLoaded;
   const mine = myMemberId(t), ccy = t.currency, ids = Object.keys(t.members || {});
   const { bal, paid, share } = balances(t.members, cur.expenses);
   const spends = cur.expenses.filter(e => e.kind !== "payment");
@@ -659,7 +689,7 @@ function tripView() {
   out.push(h("div", { class: "ticket" },
     h("div", { style: "min-width:0" }, h("div", { class: "lbl", text: tr("trip.label") }), titleBlock),
     h("div", { style: "text-align:right" }, h("div", { class: "lbl", text: tr("tripCode") }), h("div", { class: "ref", text: t.code })),
-    h("div", { class: "meta" }, h("span", {}, tr("trip.total"), h("b", { class: "num", text: money(total, ccy) })), h("span", {}, tr("people", { n: ids.length })), h("span", {}, tr("expenses", { n: spends.length })), h("span", {}, (t.localCurrency && t.localCurrency !== ccy ? tr("trip.payingIn", { c: t.localCurrency }) : "") + tr("trip.settlesIn", { c: ccy })))));
+    h("div", { class: "meta", style: waiting ? "visibility:hidden" : null }, h("span", {}, tr("trip.total"), h("b", { class: "num", text: money(total, ccy) })), h("span", {}, tr("people", { n: ids.length })), h("span", {}, tr("expenses", { n: spends.length })), h("span", {}, (t.localCurrency && t.localCurrency !== ccy ? tr("trip.payingIn", { c: t.localCurrency }) : "") + tr("trip.settlesIn", { c: ccy })))));
 
   if (!mine && guestName && !cur.autoJoined) {
     cur.autoJoined = true; const n = guestName;
@@ -698,7 +728,7 @@ function tripView() {
       return h("div", { class: "pay" + (isMine ? " mine" : "") }, h("span", {}, label), h("span", { class: "num", text: money(x.amount, s.currency || ccy) }),
         h("button", { onclick: ev => markPaid(t, x, ev.currentTarget) }, tr("pay.markPaid")));
     };
-    out.push(h("div", { class: "panel" },
+    out.push(h("div", { class: "panel needs-exp" },
       h("div", { class: "top" }, h("h2", { text: tr("pay.title") }),
         h("span", { class: "head-right" },
           h("span", { class: "muted", text: tr("pay.left", { n: s.transfers.length }) }),
@@ -718,7 +748,7 @@ function tripView() {
 
   /* balances */
   const maxAbs = Math.max(1, ...ids.map(id => Math.abs(bal[id])));
-  out.push(h("div", { class: "panel" },
+  out.push(h("div", { class: "panel needs-exp" },
     h("div", { class: "top" }, tr("bal.title") ? h("h2", { text: tr("bal.title") }) : null,
       h("button", { class: "primary", disabled: !cur.expenses.length, onclick: async ev => {
         ev.target.disabled = true; const transfers = settle(bal);
@@ -944,7 +974,7 @@ function tripView() {
   const filterBtn = h("button", { type: "button", class: "add-round filter-btn" + (filtering ? " active" : ""), title: tr("filter.toggle"), "aria-label": tr("filter.toggle"),
     "aria-expanded": String(filterOpen), onclick: () => { ui.filterOpen = !filterOpen; render(); if (ui.filterOpen) document.getElementById("xfq")?.focus(); } });
   filterBtn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8.5V19l-4 2v-7.5Z"/></svg>';
-  out.push(h("div", { class: "panel", id: "xpanel" },
+  out.push(h("div", { class: "panel needs-exp", id: "xpanel" },
     h("div", { class: "top" }, h("h2", { text: tr("list.title") }),
       cur.expenses.length ? filterBtn : null),
     cur.expenses.length ? h("div", { class: "hint", text: hasOwn ? tr("list.swipeBoth") : tr("list.swipeDel") }) : null,
@@ -1034,7 +1064,7 @@ function tripView() {
             h("button", { onclick: () => { ui.confirmDelete = null; render(); } }, tr("cancel"))))
       : h("button", { class: "ghost", style: "align-self:center;color:var(--danger)", onclick: () => { ui.confirmDelete = t.id; render(); } }, tr("del.button")));
   }
-  return out;
+  return waiting ? out.filter(n => !n?.classList?.contains("needs-exp") && !n?.classList?.contains("ana")) : out;
 }
 
 /* ---------- analytics ---------- */
@@ -1189,6 +1219,7 @@ bootFromSnapshot();
 onAuthStateChanged(auth, async user => {
   const keep = booting && user && user.uid === me?.uid; // the snapshot on screen belongs to this user
   if (booting) { booting = false; document.documentElement.classList.remove("booting"); if (!keep) closeTrip(); }
+  setBusy("auth", "off");
   if (expCacheUid && expCacheUid !== user?.uid) expCache = {};
   expCacheUid = user?.uid || null;
   me = user; unsubTrips?.(); authReadyDone();

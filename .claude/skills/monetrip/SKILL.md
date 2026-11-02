@@ -79,8 +79,11 @@ Money inside the app is integer **cents** in the trip currency: `Math.round(amou
 - The snapshot also keeps `expCache` (expenses of the last 8 opened trips). Opening a trip draws it at once
   from the trip list + `expCache`, even while the sign-in check is still running (trip rows and the back
   button stay tappable during `booting`; live listeners attach after sign-in). A trip with no saved
-  expenses shows a loading screen (`.trip-loading`, "Taking longer than usual" after 6 s); an empty
-  expense list from Firestore's cache is ignored until the server answers.
+  expenses shows only its header and People until they arrive (panels marked `needs-exp` wait); an
+  empty expense list from Firestore's cache is ignored until the server answers.
+- **Busy bar** (`#busybar`, `setBusy(key, …)` in app.js): a thin bar on the top edge while signing in,
+  while data is still from the cache, and while a write is unconfirmed (`setDoc`/`updateDoc`/`deleteDoc`
+  are wrapped). Shows after 300 ms, hides after 20 s at most. The splash screen is only for first load.
 - `render()` redraws the whole `#app` and restores typed values by element `id` — give inputs stable ids;
   fields that are driven by state (filters, `xf*`) are excluded from that restore on purpose.
 

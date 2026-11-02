@@ -330,13 +330,6 @@ button.ghost.lang{font-family:var(--mono);font-size:12px;letter-spacing:.06em;pa
 /* While the sign-in is confirmed at start-up, only opening trips, going back and adding an expense
    (the + and its sheet; saving waits for the sign-in) work. */
 html.booting #app button:not(.trip):not(.back):not(.fab):not(#sheet *),html.booting #app input:not(#sheet *),html.booting #app select:not(#sheet *),html.booting #app .swipe{pointer-events:none}
-/* Opening a trip that isn't on this phone yet */
-.trip-loading{display:flex;flex-direction:column;align-items:center;gap:6px;padding:56px 16px;text-align:center}
-.trip-loading h1{margin:0 0 4px;overflow-wrap:anywhere}
-.trip-loading .sp-dots{margin:10px 0 6px}
-.trip-loading p{margin:0}
-.trip-loading .slow{max-width:32ch;margin-top:8px;opacity:0;animation:show-late 0s linear forwards}
-@keyframes show-late{to{opacity:1}}
 .filters{display:flex;flex-direction:column;gap:8px}
 .filters input[type=search]{min-height:40px;padding:7px 10px}
 .filters select{min-height:40px;padding:7px 10px}
@@ -424,3 +417,12 @@ html.booting #app button:not(.trip):not(.back):not(.fab):not(#sheet *),html.boot
 .cat-x .xi{font-size:16px}
 .cat-x-main{display:flex;flex-direction:column;min-width:0}
 .cat-x-desc{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Busy bar: thin, top edge, sliding highlight */
+#busybar{position:fixed;left:0;right:0;top:0;height:3px;z-index:60;overflow:hidden;pointer-events:none;background:color-mix(in srgb,var(--accent) 22%,transparent)}
+#busybar::before{content:"";position:absolute;top:0;bottom:0;left:0;width:40%;border-radius:0 2px 2px 0;background:var(--accent-text);transform:translateX(-100%)}
+@media (prefers-reduced-motion:no-preference){#busybar::before{animation:busy-slide 1.1s cubic-bezier(.4,0,.2,1) infinite}}
+@media (prefers-reduced-motion:reduce){#busybar::before{transform:none;width:100%;opacity:.6}}
+#busybar:not([hidden]){animation:busy-in .2s ease}
+@keyframes busy-slide{0%{transform:translateX(-100%)}100%{transform:translateX(250%)}}
+@keyframes busy-in{from{opacity:0}}
