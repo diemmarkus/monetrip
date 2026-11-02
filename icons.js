@@ -79,7 +79,7 @@ const SEG = new Intl.Segmenter();
 const CAT_OF = {};
 for (const [cat, icons] of Object.entries(CATS)) for (const { segment } of SEG.segment(icons)) CAT_OF[segment] = cat;
 // The icon shown for each category in the legend.
-export const CAT_ICON = { food: "🍔", drinks: "🍺", groceries: "🛒", stay: "🏨", transport: "🚆", fun: "🎟️", shopping: "🛍️", health: "💊", phone: "📶", cash: "💶", other: "💰" };
+export const CAT_ICON = { food: "🍔", drinks: "🍸", groceries: "🛒", stay: "🏨", transport: "🚆", fun: "🎟️", shopping: "🛍️", health: "💊", phone: "📶", cash: "💶", other: "💰" };
 export const categoryOf = icon => CAT_OF[icon] || "other";
 // An icon without a category (a hand-picked 🦄, or 💰) falls back to what the title says.
 export const categoryFor = (icon, desc) => { const c = categoryOf(icon); return c !== "other" ? c : categoryOf(autoIcon(desc)); };
