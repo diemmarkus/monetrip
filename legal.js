@@ -27,7 +27,10 @@ const AUTHORITY = {
 // (§ 165 (3) TKG 2021 in Austria, § 25 (2) TDDDG in Germany). Keep this list in sync with the code.
 const STORAGE = [
   ["Firebase (IndexedDB)", "keeps you signed in", "hält dich angemeldet"],
+  ["mt-snap", "a copy of your name, email, profile picture link and your trips, so the app opens instantly (deleted when you sign out)", "eine Kopie deines Namens, deiner E-Mail, des Profilbild-Links und deiner Reisen, damit die App sofort startet (wird beim Abmelden gelöscht)"],
+  ["Service worker cache", "the app's own files, so it also opens offline", "die Dateien der App selbst, damit sie auch offline startet"],
   ["mt-lang", "your language choice", "deine Sprachwahl"],
+  ["mt-theme", "your light/dark choice", "deine Wahl zwischen hell und dunkel"],
   ["mt-home", "your last home currency", "deine zuletzt gewählte Heimwährung"],
   ["mt-fx", "cached exchange rates (6 hours)", "zwischengespeicherte Wechselkurse (6 Stunden)"],
   ["monetrip.icons", "icons you picked for expense descriptions", "Symbole, die du für Ausgaben gewählt hast"],
@@ -76,11 +79,12 @@ function privacy(l) {
       ] },
       { h: "Zweck und Rechtsgrundlage", p: [
         "Wir verarbeiten diese Daten, um dir die App bereitzustellen, die du nutzen willst (Art. 6 Abs. 1 lit. b DSGVO). Server-Protokolle beim Hosting dienen dem sicheren Betrieb (berechtigtes Interesse, Art. 6 Abs. 1 lit. f DSGVO).",
+        "Du bist weder gesetzlich noch vertraglich verpflichtet, Daten anzugeben; ohne Anmeldung (mit Google oder als Gast) kannst du MoneTrip aber nicht nutzen.",
       ] },
       { h: "Dienste, die wir nutzen", p: [
-        `Firebase Authentication und Cloud Firestore (Google Ireland Ltd., Gordon House, Barrow Street, Dublin 4, Irland): Anmeldung und Speicherung der Reisedaten. Die Datenbank liegt in der Region ${o.firestoreRegion}.`,
+        `Firebase Authentication und Cloud Firestore (Google Ireland Ltd., Gordon House, Barrow Street, Dublin 4, Irland): Anmeldung und Speicherung der Reisedaten. Die Datenbank liegt in der Region ${o.firestoreRegion}. Der Programmcode von Firebase wird von Servern von Google (www.gstatic.com) geladen, dein Google-Profilbild ebenfalls von Google; dabei wird deine IP-Adresse an Google übermittelt.`,
         "GitHub Pages (GitHub B.V., Niederlande, Tochter der GitHub Inc., USA): Hosting der Website. Beim Aufruf verarbeitet GitHub technisch notwendige Daten wie deine IP-Adresse.",
-        "Frankfurter (frankfurter.dev): Abruf der Wechselkurse der Europäischen Zentralbank direkt aus deinem Browser; dabei wird deine IP-Adresse übermittelt.",
+        "Frankfurter (api.frankfurter.dev, ersatzweise api.frankfurter.app): Abruf der Wechselkurse der Europäischen Zentralbank direkt aus deinem Browser; dabei wird deine IP-Adresse übermittelt.",
         "Google und GitHub sind nach dem EU-US Data Privacy Framework zertifiziert; eine Übermittlung in die USA stützt sich darauf (Art. 45 DSGVO) sowie auf Standardvertragsklauseln.",
       ] },
       { h: "Speicherung auf deinem Gerät", p: ["Schriftarten werden von MoneTrip selbst ausgeliefert, nicht von Google. MoneTrip setzt keine Tracking-Cookies. Im Browser-Speicher liegen nur Daten, die für die Funktion nötig sind:", ...storage] },
@@ -93,7 +97,7 @@ function privacy(l) {
         "Du kannst dich außerdem bei einer Aufsichtsbehörde beschweren, etwa bei " + auth + ".",
         "Es findet keine automatisierte Entscheidungsfindung oder Profilbildung statt.",
       ] },
-      { h: "Stand", p: ["Oktober 2026"] },
+      { h: "Stand", p: ["November 2026"] },
     ],
   } : {
     title: "Privacy policy",
@@ -107,11 +111,12 @@ function privacy(l) {
       ] },
       { h: "Purpose and legal basis", p: [
         "We process this data to provide the app you choose to use (Art. 6 (1)(b) GDPR). Hosting server logs keep the service secure (legitimate interest, Art. 6 (1)(f) GDPR).",
+        "You are not required by law or contract to provide data, but you can't use MoneTrip without signing in (with Google or as a guest).",
       ] },
       { h: "Services we use", p: [
-        `Firebase Authentication and Cloud Firestore (Google Ireland Ltd., Gordon House, Barrow Street, Dublin 4, Ireland): sign-in and storing trip data. The database is in the ${o.firestoreRegion} region.`,
+        `Firebase Authentication and Cloud Firestore (Google Ireland Ltd., Gordon House, Barrow Street, Dublin 4, Ireland): sign-in and storing trip data. The database is in the ${o.firestoreRegion} region. The Firebase program code is loaded from Google's servers (www.gstatic.com), and so is your Google profile picture; both send your IP address to Google.`,
         "GitHub Pages (GitHub B.V., Netherlands, a subsidiary of GitHub Inc., USA): hosting the website. When you visit, GitHub processes technically necessary data such as your IP address.",
-        "Frankfurter (frankfurter.dev): fetches European Central Bank exchange rates directly from your browser, which sends your IP address.",
+        "Frankfurter (api.frankfurter.dev, with api.frankfurter.app as fallback): fetches European Central Bank exchange rates directly from your browser, which sends your IP address.",
         "Google and GitHub are certified under the EU-US Data Privacy Framework; transfers to the USA rely on it (Art. 45 GDPR) and on standard contractual clauses.",
       ] },
       { h: "Storage on your device", p: ["Fonts are served by MoneTrip itself, not by Google. MoneTrip sets no tracking cookies. Browser storage only holds what the app needs to work:", ...storage] },
@@ -124,7 +129,7 @@ function privacy(l) {
         "You can also lodge a complaint with a supervisory authority, for example " + auth + ".",
         "There is no automated decision-making or profiling.",
       ] },
-      { h: "Last updated", p: ["October 2026"] },
+      { h: "Last updated", p: ["November 2026"] },
     ],
   };
 }
