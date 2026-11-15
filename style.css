@@ -426,3 +426,7 @@ html.booting #app button:not(.trip):not(.back):not(.fab):not(#sheet *),html.boot
 #busybar:not([hidden]){animation:busy-in .2s ease}
 @keyframes busy-slide{0%{transform:translateX(-100%)}100%{transform:translateX(250%)}}
 @keyframes busy-in{from{opacity:0}}
+.install-card{flex-direction:row;align-items:center;gap:12px;padding:12px 14px}
+.install-card img{border-radius:10px;flex:none}
+.install-card .grow{flex:1;min-width:0;line-height:1.35}
+.install-card .x{padding:6px 10px;min-height:0;color:var(--muted)}

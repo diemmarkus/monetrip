@@ -3,11 +3,11 @@ import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signI
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, query, where, onSnapshot, getDoc, setDoc as fsSet, updateDoc as fsUpdate, deleteDoc as fsDelete, arrayUnion, deleteField, FieldPath }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js?v=119";
-import { settle, balances } from "./settle.js?v=119";
-import { autoIcon, PICKS, categoryFor, CAT_ICON } from "./icons.js?v=119";
-import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=119";
-import { legalDoc } from "./legal.js?v=119";
+import { firebaseConfig } from "./firebase-config.js?v=120";
+import { settle, balances } from "./settle.js?v=120";
+import { autoIcon, PICKS, categoryFor, CAT_ICON } from "./icons.js?v=120";
+import { t as tr, lang, setLang, locale, decimalSep } from "./i18n.js?v=120";
+import { legalDoc } from "./legal.js?v=120";
 
 const CURRENCIES = ["EUR","USD","GBP","CHF","CZK","HUF","PLN","TRY","SEK","NOK","DKK","JPY","CAD","AUD","THB"];
 const $ = (s, r = document) => r.querySelector(s);
@@ -77,6 +77,34 @@ function toast(msg, action) {
   if (action) t.append(h("button", { class: "toast-act", onclick: () => { t.hidden = true; action.run(); } }, action.label));
   toast.t = setTimeout(() => t.hidden = true, action ? 5000 : 2400);
 }
+/* ---------- install as an app (home screen) ---------- */
+// Chrome/Edge/Samsung hand us an install prompt (beforeinstallprompt) once the page qualifies; we keep it
+// for the menu item and the one-time card on the home screen. Chrome's own install offer still shows too.
+// iPhone/iPad Safari has no prompt: there we explain Share → Add to Home Screen.
+let installEvt = null;
+const standalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const canInstall = () => !standalone() && (!!installEvt || isIOS);
+addEventListener("beforeinstallprompt", e => { installEvt = e; if (me && !cur.trip) render(); });
+addEventListener("appinstalled", () => { installEvt = null; installOff(); render(); });
+function installOff() { try { localStorage.setItem("mt-install-off", "1"); } catch {} }
+function installCardWanted() { try { return canInstall() && !localStorage.getItem("mt-install-off"); } catch { return false; } }
+async function installApp() {
+  if (installEvt) {
+    const e = installEvt; e.prompt();
+    try { if ((await e.userChoice).outcome === "accepted") { installEvt = null; installOff(); } } catch {}
+    render();
+  } else if (isIOS) toast(tr("install.ios"), { label: "OK", run: () => {} });
+}
+function installCard() {
+  if (!installCardWanted()) return null;
+  return h("div", { class: "panel install-card" },
+    h("img", { src: "icon-192.png", alt: "", width: 44, height: 44 }),
+    h("div", { class: "grow" }, h("b", { text: tr("install.title") }), h("br"), h("span", { class: "muted small", text: tr(isIOS && !installEvt ? "install.ios" : "install.body") })),
+    installEvt ? h("button", { class: "primary", onclick: installApp }, tr("install.btn")) : null,
+    h("button", { class: "ghost x", "aria-label": tr("install.dismiss"), title: tr("install.dismiss"), onclick: () => { installOff(); render(); } }, "✕"));
+}
+
 function rid(n = 12) { const a = "abcdefghijkmnpqrstuvwxyz23456789"; let s = ""; for (const x of crypto.getRandomValues(new Uint8Array(n))) s += a[x % a.length]; return s; }
 function refCode() { const a = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; let s = ""; for (const x of crypto.getRandomValues(new Uint8Array(6))) s += a[x % a.length]; return s; }
 const fmt = (v, c) => { try { return new Intl.NumberFormat(locale(), { style: "currency", currency: c }).format(v); } catch { return v + " " + c; } };
@@ -439,6 +467,7 @@ function brand() {
       guest ? h("button", { class: "menu-item strong", role: "menuitem", onclick: () => { closeMenu(); saveWithGoogle(); } }, tr("auth.signInGoogle")) : null,
       h("button", { class: "menu-item", role: "menuitem", lang: other, onclick: () => { setLang(other); render(); } }, other === "de" ? "Deutsch" : "English"),
       themePicker(),
+      canInstall() ? h("button", { class: "menu-item", role: "menuitem", onclick: () => { closeMenu(); installApp(); } }, tr("install.menu")) : null,
       signOutBtn);
     right = h("div", { class: "acct" },
       h("button", { class: "avatar-btn", id: "acctbtn", "aria-haspopup": "menu", "aria-controls": "acctmenu", "aria-expanded": String(!!ui.menuOpen),
@@ -633,7 +662,7 @@ function homeView() {
     h("h2", { text: tr("signin.startOwn") }),
     h("p", { class: "muted", text: tr("home.guestNote") }),
     h("button", { class: "primary", style: "align-self:flex-start", onclick: saveWithGoogle }, tr("auth.saveWithGoogle")));
-  return [brand(), h("h1", { text: tr("home.yourTrips") }), list, me.isAnonymous ? guestNote : createForm, joinForm];
+  return [brand(), installCard(), h("h1", { text: tr("home.yourTrips") }), list, me.isAnonymous ? guestNote : createForm, joinForm];
 }
 
 // Typing in the search box must not replace the box itself: a fresh input mid-word breaks the
